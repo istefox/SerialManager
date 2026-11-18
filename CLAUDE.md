@@ -17,7 +17,8 @@ See PROJECT_BRIEF.md for full context on what to build and why.
 Single-target SwiftUI app plus a unit test target, defined in `Project.swift`.
 Layout: `Sources/` (app code), `Resources/` (assets), `Tests/` (Swift Testing), `docs/` (design notes, ADRs).
 Use Observation (`@Observable`, `@Bindable`) and async/await; no `ObservableObject`.
-Persistence and secret storage are still open: see PROJECT_BRIEF.md "Open questions".
+Storage (docs/adr/0001-storage.md): entry metadata in SwiftData, serials in the macOS Keychain keyed by entry UUID, never in the SwiftData store. Backup is an encrypted JSON export.
+Keychain access goes behind a protocol; tests use an in-memory fake, never the real Keychain.
 
 ## Git conventions
 

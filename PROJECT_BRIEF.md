@@ -20,7 +20,8 @@ reinstalling software or moving to a new Mac quick and reliable.
 - List of licenses with search
 - Create, edit and delete a license entry
 - Copy a serial to the clipboard
-- Local, on-device storage
+- Local, on-device storage (SwiftData + Keychain)
+- Encrypted JSON export and import for backup
 
 **Out of scope (for now):**
 - iOS/iPadOS version
@@ -33,20 +34,19 @@ reinstalling software or moving to a new Mac quick and reliable.
 - Depth: personal tool. Moderate rigor: unit tests on model and logic, architecture kept simple.
 - SwiftUI app generated with Tuist, Swift 6 strict concurrency, macOS 14 deployment target.
 - Bundle identifier `it.stefer.SerialManager`, automatic signing.
-- No ADR yet: the first non-trivial decision (storage) gets `docs/adr/0001-storage.md`.
+- Storage (see `docs/adr/0001-storage.md`): entry metadata in SwiftData, serials in the macOS Keychain keyed by entry UUID, backup as a password-protected encrypted JSON export.
 
 ## Milestones
 
-1. Data model and local persistence for license entries
+1. Data model, SwiftData persistence and Keychain storage of serials
 2. Main window: list, search, detail and edit form
-3. Secure storage of serials and export/backup
+3. Encrypted JSON export and import
 
 ## Status
 
 - 2026-11-18: repository bootstrapped, scaffolding level "standard", first commit pushed.
+- 2026-11-18: storage decided (ADR 0001).
 
 ## Open questions
 
-- Persistence: SwiftData vs a plain JSON file for the entry metadata.
-- Secret storage: keep serials in the macOS Keychain or alongside the metadata (Keychain is the safer default).
-- Backup/export format (encrypted file, CSV, JSON).
+- Encryption scheme and file format of the backup export (key derivation, cipher), to decide at milestone 3.
