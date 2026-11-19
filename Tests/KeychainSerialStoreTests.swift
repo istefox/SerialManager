@@ -136,7 +136,7 @@ struct KeychainSerialStoreTests {
         #expect(keychain.itemCount == 0)
     }
 
-    @Test(arguments: ["  TÉST-ÄÖÜ-✓  ", "", "\tTEST-TAB\n"])
+    @Test(arguments: ["  TÉST-ÄÖÜ-✓  ", "", "\tTEST-TAB\n", "\u{FEFF}TEST-BOM"])
     func valueRoundTripsUnchanged(_ value: String) async throws {
         let store = makeStore(FakeKeychain())
         let id = UUID()

@@ -44,7 +44,7 @@ struct SerialStoreTests {
         #expect(await store.itemCount == 1)
     }
 
-    @Test(arguments: ["  TÉST-ÄÖÜ-✓  ", "", "\tTEST-TAB\n"])
+    @Test(arguments: ["  TÉST-ÄÖÜ-✓  ", "", "\tTEST-TAB\n", "\u{FEFF}TEST-BOM"])
     func valueRoundTripsUnchanged(_ value: String) async throws {
         let store = InMemorySerialStore()
         let id = UUID()

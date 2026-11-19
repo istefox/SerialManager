@@ -51,10 +51,12 @@ struct KeychainSerialStore: SerialStore {
         let (status, result) = client.copyMatching(query as CFDictionary)
         switch status {
         case errSecSuccess:
-            guard let data = result as? Data, let serial = String(data: data, encoding: .utf8) else {
+            // Validate with the failable initializer, then decode with String(decoding:as:):
+            // String(data:encoding:) drops a leading U+FEFF, which would break the round-trip.
+            guard let data = result as? Data, String(data: data, encoding: .utf8) != nil else {
                 throw SerialStoreError.undecodableData
             }
-            return serial
+            return String(decoding: data, as: UTF8.self)
         case errSecItemNotFound:
             return nil
         default:
