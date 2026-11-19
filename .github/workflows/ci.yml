@@ -1,0 +1,58 @@
+# Build and test on every pull request to main and every push to main.
+# Rationale, versions and rollback: docs/ci.md.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # A new commit on a pull request cancels the older run; runs on main always finish.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      # Pin the Xcode of the runner image instead of following its default.
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Tuist (version from mise.toml)
+        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          version: 2026.11.10
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          tuist version
+
+      - name: Generate project
+        run: tuist generate --no-open
+
+      - name: Build and run tests
+        # No certificates in CI: signing is disabled, the app is never distributed from here.
+        run: >-
+          xcodebuild test
+          -workspace SerialManager.xcworkspace
+          -scheme SerialManager
+          -destination 'platform=macOS'
+          -derivedDataPath build/DerivedData
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+          CODE_SIGN_IDENTITY=

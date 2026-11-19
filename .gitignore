@@ -70,6 +70,7 @@ Derived/
 *.xcworkspace
 .tuist-version
 Tuist/.build/
+build/
 
 # AgentsRoom (local app plumbing, never committed)
 .agentsroom/

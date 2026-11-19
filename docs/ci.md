@@ -1,0 +1,101 @@
+# Continuous integration
+
+Status: in use. Facts checked on 2026-11-19 against the live sources linked below.
+
+## What runs
+
+`.github/workflows/ci.yml` runs on every pull request to `main`, every push to `main`, and on
+demand (`workflow_dispatch`). One job, `Build and test`:
+
+1. check out the repository (no persisted credentials);
+2. install mise and, through it, the Tuist version pinned in `mise.toml`;
+3. `tuist generate --no-open`;
+4. `xcodebuild test` on the `SerialManager` scheme, with code signing disabled.
+
+`xcodebuild test` exits non-zero when a test fails or the build breaks, which fails the job.
+The workflow uses no secrets: the token it receives is read-only (`permissions: contents: read`).
+
+The same check locally:
+
+```bash
+tuist generate --no-open
+xcodebuild test -workspace SerialManager.xcworkspace -scheme SerialManager \
+  -destination 'platform=macOS' -derivedDataPath build/DerivedData \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=
+```
+
+## Decisions
+
+### Runner: `macos-26`, pinned
+
+- Standard GitHub-hosted runners, macOS included, are free for public repositories
+  ([billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions)).
+  For a private repository macOS costs $0.062 per minute, so the choice of public visibility
+  is what keeps this CI free.
+- Standard arm64 macOS runner: 3 cores (M1), 7 GB RAM, 14 GB SSD; at most 5 concurrent macOS
+  jobs on the Free plan ([runners](https://docs.github.com/en/actions/reference/runners/github-hosted-runners),
+  [limits](https://docs.github.com/en/actions/reference/limits)).
+- Labels available ([runner-images](https://github.com/actions/runner-images)): `macos-15`,
+  `macos-26` (= `macos-latest`), `xcode-27` (preview). macOS 14 images were retired from
+  GitHub Actions on 2026-11-02, so no runner matches the macOS 14 deployment target: CI builds
+  for macOS 14 but runs the tests on macOS 26.
+- The label is `macos-26`, not `macos-latest`, so an image change is a deliberate edit and not a
+  surprise on the next run.
+
+### Xcode: 26.6, pinned with `DEVELOPER_DIR`
+
+- The `macos-26` image (version 20261102) ships Xcode 26.0.1 to 26.6, default 26.6
+  ([image readme](https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md)).
+  The readme does not state the bundled Swift version. The Xcode 26 line is the release before
+  the Xcode 27 used locally, so Swift 6 language mode and the macOS 14 deployment target are
+  expected to build; the `Show toolchain` step prints the exact Xcode and Swift versions, and
+  the first run on GitHub is what confirms it.
+- Local development currently uses Xcode 27.2. The only image with Xcode 27 is `xcode-27`,
+  still in preview. CI therefore compiles with an older SDK than local builds: code that needs
+  an API newer than the Xcode 26 SDK fails in CI first. Move to `xcode-27` once it is GA.
+- When the image drops Xcode 26.6, the job fails at the first step: update `DEVELOPER_DIR`.
+
+### Tuist: 4.218.1 through mise
+
+- Tuist recommends mise on CI and pinning the version with mise
+  ([Tuist CI guide](https://tuist.dev/en/docs/guides/integrations/continuous-integration)).
+  Neither mise nor Tuist is preinstalled on the image.
+- `mise.toml` at the repository root pins Tuist 4.218.1, the latest stable release on
+  2026-11-17 and the version used locally. `jdx/mise-action` runs `mise install`, which reads
+  that file; the mise binary itself is pinned in the workflow.
+- `tuist generate` needs no Tuist account or token: only the Tuist server features (cache,
+  previews) do, and they are not used.
+
+### Actions pinned by commit SHA
+
+`actions/checkout` v7.0.1 and `jdx/mise-action` v5.2.7 are referenced by full commit SHA
+with the version in a comment. A moved tag cannot change what runs. Update them by hand.
+
+### Signing: disabled in CI
+
+`Project.swift` sets `DEVELOPMENT_TEAM` and automatic signing for local builds. The runner
+has no certificate and the repository must hold none, so the test step overrides
+`CODE_SIGNING_ALLOWED=NO`, `CODE_SIGNING_REQUIRED=NO` and an empty `CODE_SIGN_IDENTITY`.
+`Project.swift` is unchanged. The tests do not touch the real Keychain (they use the in-memory
+fake), so they need no signed entitlements. Release signing and notarisation are out of scope.
+
+## Protecting `main` (not applied)
+
+Requiring this check before merging is a separate decision for the owner. If approved, add a
+branch protection rule (or a ruleset) on `main` with "Require status checks to pass" and the
+required check `Build and test`, the job name in the workflow. The check must have run at least
+once to be selectable. Renaming the job later breaks the rule until it is updated.
+
+## Rollback
+
+Delete `.github/workflows/ci.yml` (and `mise.toml` if no longer wanted) in a pull request, or
+disable the workflow from the Actions tab with no code change. If branch protection requires the
+check, remove that requirement first, otherwise every pull request stays blocked.
+
+## What to watch
+
+- The first run on the pull request that adds this workflow: it is the first build ever made
+  with Xcode 26.6.
+- Run time: a cold run installs mise and Tuist and builds from scratch.
+- Image announcements in [runner-images](https://github.com/actions/runner-images): removal of
+  Xcode 26.6, `xcode-27` reaching GA.

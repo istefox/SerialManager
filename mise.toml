@@ -1,0 +1,3 @@
+# Tool versions pinned for local development and CI (see docs/ci.md).
+[tools]
+tuist = "4.218.1"
