@@ -58,8 +58,11 @@ enum KeychainSmokeCheck {
     }
 
     /// Lists the items matching the store's own base query (attributes only, never data).
+    /// Synchronizable and non-synchronizable items are both matched, so a synchronizable item
+    /// would show up and fail the `sync 0` check instead of being filtered out.
     private static func inspect(_ store: KeychainSerialStore, expectedCount: Int) -> Bool {
         var query = store.baseQuery(for: id)
+        query[kSecAttrSynchronizable as String] = kSecAttrSynchronizableAny
         query[kSecReturnAttributes as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitAll
 
