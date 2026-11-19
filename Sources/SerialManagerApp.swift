@@ -11,6 +11,9 @@ struct SerialManagerApp: App {
 
     init() {
         #if DEBUG
+        if CommandLine.arguments.contains(KeychainSmokeCheck.argument) { KeychainSmokeCheck.runAndExit() }
+        #endif
+        #if DEBUG
         let repository = InMemoryLicenseRepository.sample()
         backupService = InMemoryBackupService(
             repository: repository,
