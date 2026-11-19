@@ -49,7 +49,8 @@ xcodebuild test -workspace SerialManager.xcworkspace -scheme SerialManager \
   The readme does not state the bundled Swift version. The Xcode 26 line is the release before
   the Xcode 27 used locally, so Swift 6 language mode and the macOS 14 deployment target are
   expected to build; the `Show toolchain` step prints the exact Xcode and Swift versions, and
-  the first run on GitHub is what confirms it.
+  the first run on GitHub is what confirms it. First run (2026-11-19): Xcode 26.6 (17F113),
+  Swift 6.3.3, Tuist 4.218.1, 35 tests passed, job time 1 min 30 s.
 - Local development currently uses Xcode 27.2. The only image with Xcode 27 is `xcode-27`,
   still in preview. CI therefore compiles with an older SDK than local builds: code that needs
   an API newer than the Xcode 26 SDK fails in CI first. Move to `xcode-27` once it is GA.
@@ -79,23 +80,33 @@ has no certificate and the repository must hold none, so the test step overrides
 `Project.swift` is unchanged. The tests do not touch the real Keychain (they use the in-memory
 fake), so they need no signed entitlements. Release signing and notarisation are out of scope.
 
-## Protecting `main` (not applied)
+## Protecting `main`
 
-Requiring this check before merging is a separate decision for the owner. If approved, add a
-branch protection rule (or a ruleset) on `main` with "Require status checks to pass" and the
-required check `Build and test`, the job name in the workflow. The check must have run at least
-once to be selectable. Renaming the job later breaks the rule until it is updated.
+Applied on 2026-11-19, after the first green run (PR #3), with the owner's approval. Branch
+protection on `main`:
+
+- required status check `Build and test` (the job name), bound to the GitHub Actions app, so
+  no other app can satisfy it;
+- branches do not have to be up to date with `main` before merging (`strict: false`), which
+  keeps parallel feature branches mergeable without a rebase each time;
+- force pushes and deletion of `main` are blocked;
+- no required reviews (single maintainer);
+- not enforced for admins: the owner can still bypass it in an emergency, for example when
+  a runner image change breaks CI.
+
+Renaming the job breaks the rule until the required check is updated. Inspect or change it with
+`gh api repos/istefox/SerialManager/branches/main/protection`.
 
 ## Rollback
 
 Delete `.github/workflows/ci.yml` (and `mise.toml` if no longer wanted) in a pull request, or
-disable the workflow from the Actions tab with no code change. If branch protection requires the
-check, remove that requirement first, otherwise every pull request stays blocked.
+disable the workflow from the Actions tab with no code change. Remove the required check first
+(`gh api -X DELETE repos/istefox/SerialManager/branches/main/protection`), otherwise every pull
+request stays blocked.
 
 ## What to watch
 
-- The first run on the pull request that adds this workflow: it is the first build ever made
-  with Xcode 26.6.
-- Run time: a cold run installs mise and Tuist and builds from scratch.
+- Run time: about 1 min 30 s on the first run; a sudden jump usually means a cache miss or an
+  image change.
 - Image announcements in [runner-images](https://github.com/actions/runner-images): removal of
   Xcode 26.6, `xcode-27` reaching GA.
