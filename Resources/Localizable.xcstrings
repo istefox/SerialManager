@@ -1,0 +1,936 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Add License": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi licenza"
+          }
+        }
+      }
+    },
+    "Add Serial…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi seriale…"
+          }
+        }
+      }
+    },
+    "Add the serial numbers of your software to find them here.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi i numeri di serie dei tuoi programmi per ritrovarli qui."
+          }
+        }
+      }
+    },
+    "After 1 Minute": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo 1 minuto"
+          }
+        }
+      }
+    },
+    "After 2 Minutes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo 2 minuti"
+          }
+        }
+      }
+    },
+    "After 30 Seconds": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo 30 secondi"
+          }
+        }
+      }
+    },
+    "After you copy a serial, SerialManager removes it from the clipboard. Anything you copy afterwards is left alone.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopo che hai copiato un seriale, SerialManager lo toglie dagli appunti. Quello che copi dopo non viene toccato."
+          }
+        }
+      }
+    },
+    "Already in SerialManager: %lld of %lld licenses.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Già presenti in SerialManager: %lld licenze su %lld."
+          }
+        }
+      }
+    },
+    "Backup Exported": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup esportato"
+          }
+        }
+      }
+    },
+    "Backup isn't available yet in this version of SerialManager.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il backup non è ancora disponibile in questa versione di SerialManager."
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulla"
+          }
+        }
+      }
+    },
+    "Choose a license from the list to see its details.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli una licenza dall'elenco per vederne i dettagli."
+          }
+        }
+      }
+    },
+    "Clear Clipboard": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Svuota appunti"
+          }
+        }
+      }
+    },
+    "Close": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiudi"
+          }
+        }
+      }
+    },
+    "Confirm Password": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conferma password"
+          }
+        }
+      }
+    },
+    "Copied": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiato"
+          }
+        }
+      }
+    },
+    "Copy": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia"
+          }
+        }
+      }
+    },
+    "Copy Serial": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia seriale"
+          }
+        }
+      }
+    },
+    "Couldn't Delete the License": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile eliminare la licenza"
+          }
+        }
+      }
+    },
+    "Couldn't Load Licenses": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile caricare le licenze"
+          }
+        }
+      }
+    },
+    "Couldn't Save the License": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile salvare la licenza"
+          }
+        }
+      }
+    },
+    "Created %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creata il %@"
+          }
+        }
+      }
+    },
+    "Date": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina"
+          }
+        }
+      }
+    },
+    "Delete License": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina licenza"
+          }
+        }
+      }
+    },
+    "Delete License…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina licenza…"
+          }
+        }
+      }
+    },
+    "Delete “%@”?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminare “%@”?"
+          }
+        }
+      }
+    },
+    "Discard Changes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scarta modifiche"
+          }
+        }
+      }
+    },
+    "Discard changes?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scartare le modifiche?"
+          }
+        }
+      }
+    },
+    "Done": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fine"
+          }
+        }
+      }
+    },
+    "Edit": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica"
+          }
+        }
+      }
+    },
+    "Edit License": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica licenza"
+          }
+        }
+      }
+    },
+    "Existing Licenses": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licenze già presenti"
+          }
+        }
+      }
+    },
+    "Export Failed": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esportazione non riuscita"
+          }
+        }
+      }
+    },
+    "Export Licenses": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta licenze"
+          }
+        }
+      }
+    },
+    "Export Licenses…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta licenze…"
+          }
+        }
+      }
+    },
+    "Exported %lld licenses.": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Exported 1 license."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Exported %lld licenses."
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Esportata 1 licenza."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Esportate %lld licenze."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Export…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esporta…"
+          }
+        }
+      }
+    },
+    "File": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File"
+          }
+        }
+      }
+    },
+    "Hidden": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nascosto"
+          }
+        }
+      }
+    },
+    "Hide Serial": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nascondi seriale"
+          }
+        }
+      }
+    },
+    "Import": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa"
+          }
+        }
+      }
+    },
+    "Import Complete": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importazione completata"
+          }
+        }
+      }
+    },
+    "Import Failed": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importazione non riuscita"
+          }
+        }
+      }
+    },
+    "Import Licenses": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa licenze"
+          }
+        }
+      }
+    },
+    "Import Licenses…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa licenze…"
+          }
+        }
+      }
+    },
+    "Imported: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importate: %lld"
+          }
+        }
+      }
+    },
+    "Importing…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importazione…"
+          }
+        }
+      }
+    },
+    "Keep Editing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continua a modificare"
+          }
+        }
+      }
+    },
+    "License": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licenza"
+          }
+        }
+      }
+    },
+    "Modified %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modificata il %@"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome"
+          }
+        }
+      }
+    },
+    "Name or vendor": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome o produttore"
+          }
+        }
+      }
+    },
+    "Never": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mai"
+          }
+        }
+      }
+    },
+    "New License": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuova licenza"
+          }
+        }
+      }
+    },
+    "No Licenses": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna licenza"
+          }
+        }
+      }
+    },
+    "Notes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "Password": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password"
+          }
+        }
+      }
+    },
+    "Product": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prodotto"
+          }
+        }
+      }
+    },
+    "Product Name": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome prodotto"
+          }
+        }
+      }
+    },
+    "Product name is required.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il nome del prodotto è obbligatorio."
+          }
+        }
+      }
+    },
+    "Purchase Date": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data d'acquisto"
+          }
+        }
+      }
+    },
+    "Registered Email": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email di registrazione"
+          }
+        }
+      }
+    },
+    "Replace": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostituisci"
+          }
+        }
+      }
+    },
+    "Replaced: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sostituite: %lld"
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva"
+          }
+        }
+      }
+    },
+    "Select a License": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleziona una licenza"
+          }
+        }
+      }
+    },
+    "Serial": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seriale"
+          }
+        }
+      }
+    },
+    "Serial copied": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seriale copiato"
+          }
+        }
+      }
+    },
+    "Show Serial": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra seriale"
+          }
+        }
+      }
+    },
+    "Show in Finder": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra nel Finder"
+          }
+        }
+      }
+    },
+    "Show or Hide Serial": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra o nascondi seriale"
+          }
+        }
+      }
+    },
+    "Skip": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salta"
+          }
+        }
+      }
+    },
+    "Skipped: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saltate: %lld"
+          }
+        }
+      }
+    },
+    "The backup contains all your licenses and serials, encrypted with this password. You need it to restore the backup: it can't be recovered if you forget it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il backup contiene tutte le tue licenze e i seriali, cifrati con questa password. Ti servirà per ripristinare il backup: se la dimentichi non si può recuperare."
+          }
+        }
+      }
+    },
+    "The current serial couldn't be read, so saving now would remove it. Enter the serial again, or close the form and try later.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stato possibile leggere il seriale attuale: salvando ora verrebbe cancellato. Inseriscilo di nuovo, oppure chiudi il modulo e riprova più tardi."
+          }
+        }
+      }
+    },
+    "The password is incorrect.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La password non è corretta."
+          }
+        }
+      }
+    },
+    "The passwords don't match.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le password non coincidono."
+          }
+        }
+      }
+    },
+    "The serial for this license is missing from the Keychain.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il seriale di questa licenza non è nel Portachiavi."
+          }
+        }
+      }
+    },
+    "This also removes its serial from the Keychain. This can't be undone.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viene eliminato anche il seriale dal Portachiavi. L'operazione non si può annullare."
+          }
+        }
+      }
+    },
+    "This backup was made with a newer version of SerialManager.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo backup è stato creato con una versione più recente di SerialManager."
+          }
+        }
+      }
+    },
+    "This file isn't a valid SerialManager backup.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo file non è un backup valido di SerialManager."
+          }
+        }
+      }
+    },
+    "Try Again": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprova"
+          }
+        }
+      }
+    },
+    "Vendor": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Produttore"
+          }
+        }
+      }
+    },
+    "Version": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versione"
+          }
+        }
+      }
+    },
+    "Without a serial in the Keychain: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senza seriale nel Portachiavi: %lld"
+          }
+        }
+      }
+    },
+    "Your changes to this license will be lost.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modifiche a questa licenza andranno perse."
+          }
+        }
+      }
+    },
+    "Your current licenses are overwritten with the ones in the backup.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le licenze attuali vengono sovrascritte con quelle del backup."
+          }
+        }
+      }
+    },
+    "Your current licenses stay as they are.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le licenze attuali restano come sono."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

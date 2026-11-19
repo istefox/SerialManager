@@ -7,6 +7,8 @@ let baseSettings: SettingsDictionary = [
     "DEVELOPMENT_TEAM": "T7H24G7BFW",
     "CODE_SIGN_STYLE": "Automatic",
     "SWIFT_VERSION": "6.0",
+    "SWIFT_EMIT_LOC_STRINGS": "YES",
+    "LOCALIZATION_PREFERS_STRING_CATALOGS": "YES",
 ]
 
 let project = Project(
@@ -19,7 +21,18 @@ let project = Project(
             product: .app,
             bundleId: "\(bundlePrefix).\(projectName)",
             deploymentTargets: .macOS("14.0"),
-            infoPlist: .extendingDefault(with: [:]),
+            infoPlist: .extendingDefault(with: [
+                "UTExportedTypeDeclarations": [
+                    [
+                        "UTTypeIdentifier": "\(bundlePrefix).\(projectName).backup",
+                        "UTTypeDescription": "SerialManager Backup",
+                        "UTTypeConformsTo": ["public.data"],
+                        "UTTypeTagSpecification": [
+                            "public.filename-extension": ["smbackup"],
+                        ],
+                    ],
+                ],
+            ]),
             sources: ["Sources/**"],
             resources: ["Resources/**"],
             dependencies: []
