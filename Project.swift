@@ -35,7 +35,7 @@ let project = Project(
             ]),
             sources: ["Sources/**"],
             resources: ["Resources/**"],
-            // Data protection keychain (docs/adr/0002-keychain-implementation.md): a real
+            // Data protection keychain (docs/adr/0003-keychain-implementation.md): a real
             // development signature and the app's own keychain access group, authorized by a
             // provisioning profile. CI builds with signing disabled.
             entitlements: .dictionary([

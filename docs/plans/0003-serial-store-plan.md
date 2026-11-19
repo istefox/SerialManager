@@ -107,7 +107,7 @@ covers the App ID and profile registration, so T1 needs no further approval. Con
 | `Tests/SerialStoreTests.swift` | Fake behaviour (A1 to A5, A7) |
 | `Tests/KeychainSerialStoreTests.swift` | Mapping, query attributes and save/read/delete flow over a fake `KeychainClient` |
 | `Project.swift` | Signing identity and entitlement (T1) |
-| `docs/adr/0002-keychain-implementation.md` | Records F1, F2 and D5 (T6) |
+| `docs/adr/0003-keychain-implementation.md` | Records F1, F2 and D5 (T6) |
 
 ### 3.2 Protocol (R1)
 
@@ -219,7 +219,7 @@ empty strings as given (empty-serial policy is #4's).
 | T3 | Keychain implementation + client seam + mapping/flow tests | backend | T2 (protocol/error file) | T1 |
 | T4 | Full build and test, data and scope check | backend | T1, T2, T3, T5 (Release check) | none |
 | T5 | Smoke harness + manual smoke check | backend builds, qa runs | T1, T3 | T6 |
-| T6 | ADR 0002 on the keychain implementation | backend (Architect drafts text on request) | none | T2 to T5 |
+| T6 | ADR 0003 on the keychain implementation | backend (Architect drafts text on request) | none | T2 to T5 |
 | T7 | Combined QA and review | qa, code-reviewer | T4, T5, T6 | none |
 
 One backend developer can do T2 then T3 back to back; T1 can run first or in parallel. Frontend has no work
@@ -299,9 +299,9 @@ in this ticket (R12): confirmed.
 - Risk: touches `SerialManagerApp.swift`, which #4 rewires; the hook is a separate `#if DEBUG` line at the top
   of `init()` so the merge is trivial.
 
-### T6. ADR 0002: keychain implementation
+### T6. ADR 0003: keychain implementation
 
-- SPEC: R7 (documented sources). File: `docs/adr/0002-keychain-implementation.md`.
+- SPEC: R7 (documented sources). File: `docs/adr/0003-keychain-implementation.md`.
 - Content: F1 sources with retrieval date 2026-11-19, F2 observation, D5 and its consequences (signing,
   CI, `security` tool). Commit `docs: add ADR on keychain implementation`.
 

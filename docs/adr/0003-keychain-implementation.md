@@ -1,4 +1,4 @@
-# ADR 0002: Keychain implementation for serials
+# ADR 0003: Keychain implementation for serials
 
 - Status: accepted
 - Date: 2026-11-19

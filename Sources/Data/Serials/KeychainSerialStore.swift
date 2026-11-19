@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// `SerialStore` backed by the macOS data protection keychain (ADR 0001, ADR 0002).
+/// `SerialStore` backed by the macOS data protection keychain (ADR 0001, ADR 0003).
 ///
 /// Each serial is a generic password item: service = `service` (the bundle identifier by default),
 /// account = the license UUID string. Items are device-local (`WhenUnlockedThisDeviceOnly`) and
