@@ -34,7 +34,7 @@ reinstalling software or moving to a new Mac quick and reliable.
 - Depth: personal tool. Moderate rigor: unit tests on model and logic, architecture kept simple.
 - SwiftUI app generated with Tuist, Swift 6 strict concurrency, macOS 14 deployment target.
 - Bundle identifier `it.stefer.SerialManager`, automatic signing.
-- Storage (see `docs/adr/0001-storage.md`): entry metadata in SwiftData, serials in the macOS Keychain keyed by entry UUID, backup as a password-protected encrypted JSON export.
+- Storage (see `docs/adr/0001-storage.md`): entry metadata in SwiftData, serials in the macOS Keychain keyed by entry UUID, backup as a password-protected encrypted JSON export, whose format and encryption are fixed in `docs/adr/0002-backup-format.md` (versioned `.smbackup` file, PBKDF2-HMAC-SHA256 through CommonCrypto, AES-256-GCM through CryptoKit, password of at least 12 characters).
 
 ## Milestones
 
@@ -46,7 +46,8 @@ reinstalling software or moving to a new Mac quick and reliable.
 
 - 2026-11-18: repository bootstrapped, scaffolding level "standard", first commit pushed.
 - 2026-11-18: storage decided (ADR 0001).
+- 2026-11-19: backup format decided (ADR 0002).
 
 ## Open questions
 
-- Encryption scheme and file format of the backup export (key derivation, cipher), to decide at milestone 3.
+- None open. The backup encryption scheme and file format were decided on 2026-11-19 in `docs/adr/0002-backup-format.md`.
