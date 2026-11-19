@@ -31,8 +31,9 @@ implementation and an in-memory fake. Ticket #4 (`LicenseRepository`) is its onl
   between Macs. Keychain items are device-local and not synchronizable.
 - D5 (Stefano, 2026-11-19, from plan v1 Q1): use the data protection keychain. The app is signed
   with the Apple Development identity of team T7H24G7BFW and carries a `keychain-access-groups`
-  entitlement limited to its own group; Xcode registers the App ID `it.stefer.SerialManager` and a
-  macOS development profile on that team. Reason: only the data protection keychain honours a
+  entitlement limited to its own group; Xcode signs it with the team's wildcard macOS development
+  profile (`T7H24G7BFW.*`); the signed entitlements carry the exact application identifier and
+  access group (ADR 0003). Reason: only the data protection keychain honours a
   `ThisDeviceOnly` accessibility class (TN3137); the build at `61dd579` is ad-hoc signed.
 
 ## Scope
