@@ -521,6 +521,16 @@
         }
       }
     },
+    "Keychain access was denied. Try again, or check the Keychain permissions for SerialManager.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'accesso al Portachiavi è stato negato. Riprova, oppure controlla i permessi del Portachiavi per SerialManager."
+          }
+        }
+      }
+    },
     "License": {
       "localizations": {
         "it": {

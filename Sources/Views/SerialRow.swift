@@ -101,4 +101,11 @@ private struct SerialRowPreview: View {
 #Preview("Serial, missing") { SerialRowPreview(lookup: .missing, isRevealed: false) }
 #Preview("Serial, loading") { SerialRowPreview(lookup: .loading, isRevealed: false) }
 #Preview("Serial, error") { SerialRowPreview(lookup: .failed("Keychain error (sample)."), isRevealed: false) }
+#Preview("Serial, access denied") {
+    SerialRowPreview(lookup: .failed(SerialStoreError.accessDenied.localizedDescription), isRevealed: false)
+}
+#Preview("Serial, unexpected Keychain error") {
+    SerialRowPreview(lookup: .failed(SerialStoreError.unexpected(status: -25300).localizedDescription),
+                     isRevealed: false)
+}
 #endif
