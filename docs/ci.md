@@ -127,7 +127,12 @@ request stays blocked.
 
 ## What to watch
 
-- Run time: about 1 min 30 s on the first run; a sudden jump usually means a cache miss or an
-  image change.
+- Run time: about 1 min 30 s on the first run; 2 min 19 s once the Release build was added
+  (2026-11-20, PR #8: tests 1 min 23 s, Release build 34 s). The limit is `timeout-minutes: 30`.
+  A sudden jump usually means a cache miss or an image change.
+- Release step proof (2026-11-20): a type error placed only in the `#else` branch of
+  `SerialManagerApp.init()` left the 111 tests green and failed `Build Release`
+  ([run 44798342854](https://github.com/istefox/SerialManager/actions/runs/44798342854),
+  throwaway branch, never merged).
 - Image announcements in [runner-images](https://github.com/actions/runner-images): removal of
   Xcode 26.6, `xcode-27` reaching GA.
