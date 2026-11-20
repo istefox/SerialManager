@@ -1,4 +1,4 @@
-# Build and test on every pull request to main and every push to main.
+# Test (Debug) and build Release on every pull request to main and every push to main.
 # Rationale, versions and rollback: docs/ci.md.
 name: CI
 
@@ -51,6 +51,20 @@ jobs:
           xcodebuild test
           -workspace SerialManager.xcworkspace
           -scheme SerialManager
+          -destination 'platform=macOS'
+          -derivedDataPath build/DerivedData
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+          CODE_SIGN_IDENTITY=
+
+      - name: Build Release
+        # Tests compile Debug only; this compiles the code under `#if !DEBUG`
+        # (the release wiring in SerialManagerApp.init). Unsigned, never distributed.
+        run: >-
+          xcodebuild build
+          -workspace SerialManager.xcworkspace
+          -scheme SerialManager
+          -configuration Release
           -destination 'platform=macOS'
           -derivedDataPath build/DerivedData
           CODE_SIGNING_ALLOWED=NO

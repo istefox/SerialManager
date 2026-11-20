@@ -10,9 +10,12 @@ demand (`workflow_dispatch`). One job, `Build and test`:
 1. check out the repository (no persisted credentials);
 2. install mise and, through it, the Tuist version pinned in `mise.toml`;
 3. `tuist generate --no-open`;
-4. `xcodebuild test` on the `SerialManager` scheme, with code signing disabled.
+4. `xcodebuild test` on the `SerialManager` scheme, with code signing disabled (Debug);
+5. `xcodebuild build -configuration Release` on the same scheme, workspace and DerivedData,
+   also unsigned.
 
-`xcodebuild test` exits non-zero when a test fails or the build breaks, which fails the job.
+Each `xcodebuild` call exits non-zero when a test fails or the build breaks, which fails the
+job. The Release step runs only if the tests passed.
 The workflow uses no secrets: the token it receives is read-only (`permissions: contents: read`).
 
 The same check locally:
@@ -22,9 +25,24 @@ tuist generate --no-open
 xcodebuild test -workspace SerialManager.xcworkspace -scheme SerialManager \
   -destination 'platform=macOS' -derivedDataPath build/DerivedData \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=
+xcodebuild build -workspace SerialManager.xcworkspace -scheme SerialManager \
+  -configuration Release -destination 'platform=macOS' -derivedDataPath build/DerivedData \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=
 ```
 
 ## Decisions
+
+### Release build as well as the tests
+
+`xcodebuild test` compiles the Debug configuration only. Code under `#if DEBUG` / `#else`
+differs between the two: `SerialManagerApp.init()` wires the real `LicenseLibrary.makeRepository()`
+only in Release, while Debug uses in-memory fakes. Without the Release step a compile error in
+that branch would reach `main` unnoticed (plan `docs/plans/0004-license-repository-plan.md`,
+P7). The step only compiles: the Release app is not run, signed or uploaded.
+
+It reuses the job's DerivedData, so packages and the module cache are shared, but Release
+(whole-module optimisation) recompiles the app sources from scratch. Measured cost: see
+"What to watch".
 
 ### Runner: `macos-26`, pinned
 
@@ -75,7 +93,7 @@ with the version in a comment. A moved tag cannot change what runs. Update them 
 ### Signing: disabled in CI
 
 `Project.swift` sets `DEVELOPMENT_TEAM` and automatic signing for local builds. The runner
-has no certificate and the repository must hold none, so the test step overrides
+has no certificate and the repository must hold none, so both `xcodebuild` steps override
 `CODE_SIGNING_ALLOWED=NO`, `CODE_SIGNING_REQUIRED=NO` and an empty `CODE_SIGN_IDENTITY`.
 `Project.swift` is unchanged. The tests do not touch the real Keychain (they use the in-memory
 fake), so they need no signed entitlements. Release signing and notarisation are out of scope.
@@ -99,7 +117,10 @@ Renaming the job breaks the rule until the required check is updated. Inspect or
 
 ## Rollback
 
-Delete `.github/workflows/ci.yml` (and `mise.toml` if no longer wanted) in a pull request, or
+To drop only the Release build, delete the `Build Release` step from `ci.yml` in a pull
+request: the job name, and therefore the required check, stay the same.
+
+To remove CI altogether, delete `.github/workflows/ci.yml` (and `mise.toml` if no longer wanted) in a pull request, or
 disable the workflow from the Actions tab with no code change. Remove the required check first
 (`gh api -X DELETE repos/istefox/SerialManager/branches/main/protection`), otherwise every pull
 request stays blocked.

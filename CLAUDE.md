@@ -35,7 +35,7 @@ xcodebuild -workspace SerialManager.xcworkspace -scheme SerialManager -destinati
 xcodebuild -workspace SerialManager.xcworkspace -scheme SerialManager -destination 'platform=macOS' test
 ```
 
-CI: `.github/workflows/ci.yml` runs generate + test on every PR and push to `main` (macOS 26 runner, Xcode 26.6, signing disabled). Tuist version pinned in `mise.toml`. Details and rollback: `docs/ci.md`.
+CI: `.github/workflows/ci.yml` runs generate + test (Debug) + Release build on every PR and push to `main` (macOS 26 runner, Xcode 26.6, signing disabled). Tuist version pinned in `mise.toml`. Details and rollback: `docs/ci.md`.
 
 ## Working agreements
 
