@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22406b"/>
+      <stop offset="1" stop-color="#0a1424"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.55">
+      <stop offset="0" stop-color="#5b8cd6" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#5b8cd6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff0c2"/>
+      <stop offset="0.35" stop-color="#f3c45e"/>
+      <stop offset="1" stop-color="#b07816"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c58a1f"/>
+      <stop offset="1" stop-color="#7a4d06"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="iconShadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <clipPath id="squircle"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
+  </defs>
+
+  <!-- Tile -->
+  <g filter="url(#iconShadow)">
+    <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  </g>
+  <g clip-path="url(#squircle)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#glow)"/>
+    <!-- faint masked-serial dots, like the app's hidden serial -->
+    <g fill="#ffffff" fill-opacity="0.10">
+      <circle cx="232" cy="812" r="14"/><circle cx="280" cy="812" r="14"/><circle cx="328" cy="812" r="14"/><circle cx="376" cy="812" r="14"/>
+      <circle cx="448" cy="812" r="14"/><circle cx="496" cy="812" r="14"/><circle cx="544" cy="812" r="14"/><circle cx="592" cy="812" r="14"/>
+      <circle cx="664" cy="812" r="14"/><circle cx="712" cy="812" r="14"/><circle cx="760" cy="812" r="14"/><circle cx="808" cy="812" r="14"/>
+    </g>
+  </g>
+  <rect x="101.5" y="101.5" width="821" height="821" rx="184" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="3"/>
+
+  <!-- Key: the bit is a serial number. Shadows are layered copies: renderers like NSImage skip SVG filters. -->
+  <g transform="translate(-28 -14)">
+    <g transform="translate(0 26) rotate(-32 512 500) translate(22 0)" fill="#000000" fill-opacity="0.18">
+    <path fill-rule="evenodd" d="M 330 360 a 150 150 0 1 0 0.1 0 Z M 330 452 a 58 58 0 1 1 -0.1 0 Z"/>
+    <rect x="462" y="462" width="44" height="96" rx="10"/>
+    <rect x="500" y="474" width="330" height="72" rx="12"/>
+    <path d="M 600 543 L 600 612 L 636 612 L 636 584 L 668 584 L 668 632 L 704 632 L 704 566 L 728 566 L 728 600 L 764 600 L 764 576 L 800 576 L 800 543 Z"/>
+    </g>
+    <g transform="translate(0 12) rotate(-32 512 500) translate(22 0)" fill="#000000" fill-opacity="0.22">
+    <path fill-rule="evenodd" d="M 330 360 a 150 150 0 1 0 0.1 0 Z M 330 452 a 58 58 0 1 1 -0.1 0 Z"/>
+    <rect x="462" y="462" width="44" height="96" rx="10"/>
+    <rect x="500" y="474" width="330" height="72" rx="12"/>
+    <path d="M 600 543 L 600 612 L 636 612 L 636 584 L 668 584 L 668 632 L 704 632 L 704 566 L 728 566 L 728 600 L 764 600 L 764 576 L 800 576 L 800 543 Z"/>
+    </g>
+    <g transform="rotate(-32 512 500) translate(22 0)">
+    <!-- bow -->
+    <path fill-rule="evenodd" fill="url(#brass)" stroke="url(#rim)" stroke-width="8"
+          d="M 330 360 a 150 150 0 1 0 0.1 0 Z M 330 452 a 58 58 0 1 1 -0.1 0 Z"/>
+    <circle cx="330" cy="510" r="112" fill="none" stroke="#a86f12" stroke-opacity="0.55" stroke-width="6"/>
+    <!-- collar -->
+    <rect x="462" y="462" width="44" height="96" rx="10" fill="url(#brass)" stroke="url(#rim)" stroke-width="6"/>
+    <!-- shaft -->
+    <rect x="500" y="474" width="330" height="72" rx="12" fill="url(#brass)" stroke="url(#rim)" stroke-width="6"/>
+    <!-- teeth: a stepped code profile -->
+    <path fill="url(#brass)" stroke="url(#rim)" stroke-width="6" stroke-linejoin="round"
+          d="M 600 543 L 600 612 L 636 612 L 636 584 L 668 584 L 668 632 L 704 632 L 704 566 L 728 566 L 728 600 L 764 600 L 764 576 L 800 576 L 800 543 Z"/>
+    <!-- engraved fake serial -->
+    <text x="666" y="524" font-family="Menlo, Menlo-Bold, monospace" font-weight="bold" font-size="34"
+          text-anchor="middle" letter-spacing="3" fill="#7a4d06" fill-opacity="0.85">A1B2-C3D4</text>
+    <!-- highlight on shaft -->
+    <rect x="512" y="482" width="306" height="10" rx="5" fill="#ffffff" fill-opacity="0.35"/>
+      <path d="M 214 450 A 130 130 0 0 1 372 386" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="10" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>
