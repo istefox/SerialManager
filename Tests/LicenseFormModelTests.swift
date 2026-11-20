@@ -77,4 +77,60 @@ struct LicenseFormModelTests {
         #expect(model.errorMessage != nil)
         #expect(await store.serial(for: SampleData.first.id) == .present("ACME-0000-TEST-0000"))
     }
+
+    // MARK: D3, failed action drives the alert title
+
+    private struct SampleFailure: Error {}
+
+    @Test func failedDeleteSetsDeleteAction() async {
+        let repository = InMemoryLicenseRepository(entries: SampleData.entries)
+        let store = LicenseStore(repository: repository)
+        await store.load()
+        await repository.setFailure(SampleFailure())
+        let model = LicenseFormModel(license: SampleData.first)
+        #expect(await model.delete(from: store) == false)
+        #expect(model.failedAction == .delete)
+        #expect(model.errorMessage != nil)
+    }
+
+    @Test func failedSaveSetsSaveAction() async {
+        let repository = InMemoryLicenseRepository(entries: SampleData.entries)
+        let store = LicenseStore(repository: repository)
+        await store.load()
+        await repository.setFailure(SampleFailure())
+        let model = LicenseFormModel()
+        model.draft.productName = "Sample Failing App"
+        #expect(await model.save(to: store) == false)
+        #expect(model.failedAction == .save)
+        #expect(model.errorMessage != nil)
+    }
+
+    @Test func unreadableSerialGuardSetsSaveAction() async {
+        let repository = InMemoryLicenseRepository(entries: SampleData.entries)
+        let store = LicenseStore(repository: repository)
+        await store.load()
+        await repository.setFailure(SampleFailure())
+        let model = LicenseFormModel(license: SampleData.first)
+        await model.loadSerial(from: store)
+        await repository.setFailure(nil)
+        #expect(await model.save(to: store) == false)
+        #expect(model.failedAction == .save)
+        #expect(model.errorMessage != nil)
+    }
+
+    @Test func failedSaveAfterFailedDeleteSetsSaveAction() async {
+        let repository = InMemoryLicenseRepository(entries: SampleData.entries)
+        let store = LicenseStore(repository: repository)
+        await store.load()
+        await repository.setFailure(SampleFailure())
+        let model = LicenseFormModel(license: SampleData.first)
+        await model.loadSerial(from: store)
+        #expect(await model.delete(from: store) == false)
+        #expect(model.failedAction == .delete)
+        model.errorMessage = nil
+        model.draft.serial = "SAMPLE-0000-FAKE-0000"
+        #expect(await model.save(to: store) == false)
+        #expect(model.failedAction == .save)
+        #expect(model.errorMessage != nil)
+    }
 }

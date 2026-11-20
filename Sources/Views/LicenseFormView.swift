@@ -49,7 +49,9 @@ struct LicenseFormView: View {
             DeleteConfirmation.message
         }
         .alert(
-            "Couldn't Save the License",
+            model.failedAction == .delete
+                ? Text("Couldn't Delete the License")
+                : Text("Couldn't Save the License"),
             isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })
         ) {
             Button("OK", role: .cancel) {}
