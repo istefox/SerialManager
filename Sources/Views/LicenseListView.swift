@@ -33,12 +33,10 @@ struct LicenseRow: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(license.productName)
                 .font(.headline)
-                .lineLimit(2)
             if !license.vendor.isEmpty {
                 Text(license.vendor)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
             }
         }
         .padding(.vertical, 2)
@@ -61,5 +59,26 @@ struct LicenseRow: View {
     } detail: {
         EmptyView()
     }
+}
+
+#Preview("List, long names") {
+    let date = Date(timeIntervalSince1970: 1_767_225_600) // 2026-01-01
+    func entry(_ name: String, vendor: String) -> (LicenseSummary, String?) {
+        let license = LicenseSummary(
+            id: UUID(), productName: name, vendor: vendor, registeredEmail: "user@example.com",
+            purchaseDate: date, version: "1.0", notes: "", createdAt: date, updatedAt: date
+        )
+        return (license, "FAKE-0000-TEST")
+    }
+    let entries = [
+        entry("Fictional Backup Pro Enterprise Edition Twenty Twenty-Six",
+              vendor: "Example Software Distribution Company"),
+        entry("Alpha Test Tool", vendor: "Example Corp"),
+    ]
+    // The sidebar at its minimum width (220 pt).
+    return NavigationStack {
+        LicenseListView(store: .preview(entries: entries))
+    }
+    .frame(width: 220, height: 440)
 }
 #endif
