@@ -296,10 +296,11 @@ sample data (`ACME-0000-TEST-0000`, `user@example.com`) for previews and tests.
 
 ## Sample data
 
-The GUI runs on the in-memory fakes in `Sources/Fakes` until the data layer lands.
-`SampleData` and the preview helpers are compiled only in Debug: a Release build starts
-with an empty in-memory store and contains no sample values. When the data layer is ready,
-`SerialManagerApp.init` is the single place to swap the fakes for the real implementations.
+Debug builds and previews run on the in-memory fakes in `Sources/Fakes`. `SampleData` and
+the preview helpers are compiled only in Debug, so a Release build contains no sample values.
+A Release build uses the real repository instead: entries persist in SwiftData and serials in
+the Keychain (ticket #4). `SerialManagerApp.init` is the single place that picks the fakes or
+the real implementations.
 
 ## Known gaps
 
