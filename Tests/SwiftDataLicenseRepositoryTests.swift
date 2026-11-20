@@ -245,6 +245,27 @@ struct SwiftDataLicenseRepositoryTests {
         #expect(summary.createdAt == t)
     }
 
+    @Test func updateWithSameSerialOnlyReadsIt() async throws {
+        let container = try makeContainer()
+        let serials = ScriptedSerialStore()
+        let original = try await seed(container, serials, serial: s)
+
+        // Persist failure: nothing was written, so nothing is compensated.
+        await #expect(throws: PersistFailure()) {
+            try await makeRepository(container, serials, at: tPlus1, failingSave: true)
+                .update(id: u, with: draft("Renamed App", serial: s))
+        }
+        #expect(try stored(in: container) == [original])
+        #expect(await serials.log == [.init(operation: .read, id: u)])
+
+        // Success: the fields change, the item is left alone.
+        await serials.clearLog()
+        let summary = try await makeRepository(container, serials, at: tPlus1).update(id: u, with: draft("Renamed App", serial: s))
+        #expect(summary.productName == "Renamed App")
+        #expect(await serials.items == [u: s])
+        #expect(await serials.log == [.init(operation: .read, id: u)])
+    }
+
     @Test func updateUnknownIDThrowsNotFound() async throws {
         let container = try makeContainer()
         let serials = ScriptedSerialStore()
