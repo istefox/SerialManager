@@ -2,9 +2,11 @@ import SwiftUI
 
 @main
 struct SerialManagerApp: App {
-    // The data layer (SwiftData + Keychain) is not built yet: until it lands, the app runs
-    // on in-memory fakes. Debug builds load fake sample data; release builds start empty
-    // and have Import and Export disabled.
+    // Release builds use the persistent library: entries in SwiftData, serials in the Keychain
+    // (LicenseLibrary). If the library cannot be opened, the window shows its failure state
+    // instead of running on an in-memory store. Import and Export stay disabled until the
+    // encrypted backup lands. Debug builds and previews run on in-memory fakes with fake
+    // sample data.
     @State private var store: LicenseStore
     @State private var router = AppRouter()
     private let backupService: any BackupService
@@ -21,7 +23,7 @@ struct SerialManagerApp: App {
             importConflicts: Set(SampleData.licenses.prefix(2).map(\.id)))
         #else
         // No fake backup in release: it would report files that were never written.
-        let repository = InMemoryLicenseRepository()
+        let repository = LicenseLibrary.makeRepository()
         backupService = UnavailableBackupService()
         #endif
         _store = State(initialValue: LicenseStore(repository: repository))
