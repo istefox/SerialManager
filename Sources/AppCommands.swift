@@ -26,10 +26,10 @@ struct AppCommands: Commands {
                 .disabled(noSelection)
             Button("Copy Serial") { router.send(.copySerial) }
                 .keyboardShortcut("c", modifiers: [.command, .shift])
-                .disabled(noSelection)
+                .disabled(!store.isSelectedSerialAvailable)
             Button("Show or Hide Serial") { router.send(.toggleSerial) }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
-                .disabled(noSelection)
+                .disabled(!store.isSelectedSerialAvailable)
             Divider()
             Button("Delete License\u{2026}") { router.send(.deleteLicense) }
                 .disabled(noSelection)

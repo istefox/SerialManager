@@ -37,7 +37,7 @@ final class LicenseFormModel {
     func loadSerial(from store: LicenseStore) async {
         guard let license, isLoadingSerial else { return }
         defer { isLoadingSerial = false }
-        switch await store.serial(for: license.id) {
+        switch await store.serialWithoutRecording(for: license.id) {
         case .present(let serial):
             // Keep anything the user already typed while the serial was loading.
             if draft.serial.isEmpty { draft.serial = serial }

@@ -155,8 +155,10 @@ States: Password entry, Wrong password, Corrupted file, Conflicts found, Importi
 | License | Delete License... | none |
 
 `File > New Window` is replaced (`CommandGroup(replacing: .newItem)`), since `Cmd+N`
-creates a license. License commands are disabled without a selection. Menu commands reach
-the window through `AppRouter` (an `@Observable` request bus).
+creates a license. License commands are disabled without a selection. Copy Serial and
+Show or Hide Serial are also disabled while the selected entry's serial is loading,
+missing or failed to load. Menu commands reach the window through `AppRouter` (an
+`@Observable` request bus).
 
 Delete has no `Cmd+Backspace` shortcut on purpose: a menu shortcut would win over the text
 fields, so `Cmd+Backspace` in the search field would ask to delete the selected license
