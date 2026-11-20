@@ -741,6 +741,16 @@
         }
       }
     },
+    "SerialManager couldn't open its library file. Quit and reopen the app; if this keeps happening, check the disk.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SerialManager non è riuscito ad aprire il file dell'archivio. Esci e riapri l'app; se il problema si ripete, controlla il disco."
+          }
+        }
+      }
+    },
     "Show Serial": {
       "localizations": {
         "it": {

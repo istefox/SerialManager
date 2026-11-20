@@ -37,4 +37,26 @@ struct ErrorMessageTests {
         #expect(!saved)
         #expect(model.errorMessage == text)
     }
+
+    @Test func libraryUnavailableHasDedicatedText() throws {
+        let text = try #require(LicenseRepositoryError.libraryUnavailable.errorDescription)
+        #expect(!text.isEmpty)
+        #expect(text != accessDeniedText)
+        #expect(LicenseRepositoryError.libraryUnavailable.localizedDescription == text)
+    }
+
+    @Test func libraryUnavailableShowsInLoadFailure() async throws {
+        let text = try #require(LicenseRepositoryError.libraryUnavailable.errorDescription)
+        let store = LicenseStore(repository: InMemoryLicenseRepository(failure: LicenseRepositoryError.libraryUnavailable))
+        await store.load()
+        #expect(store.phase == .failed(text))
+    }
+
+    @Test(arguments: [LicenseRepositoryError.notFound(UUID()), .duplicateID(UUID())])
+    func otherRepositoryErrorsKeepGenericText(_ error: LicenseRepositoryError) {
+        let dedicated = LicenseRepositoryError.libraryUnavailable.errorDescription
+        #expect(error.errorDescription == nil)
+        #expect(error.localizedDescription != dedicated)
+        #expect(error.localizedDescription != accessDeniedText)
+    }
 }
