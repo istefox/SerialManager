@@ -191,6 +191,11 @@ extension ContentView {
     return ContentView.preview(LicenseStore(repository: InMemoryLicenseRepository(failure: SampleFailure())))
 }
 
+#Preview("Main, library unavailable") {
+    ContentView.preview(LicenseStore(
+        repository: InMemoryLicenseRepository(failure: LicenseRepositoryError.libraryUnavailable)))
+}
+
 #Preview("Main, Italian") {
     ContentView.preview(.preview(selection: SampleData.first.id))
         .environment(\.locale, Locale(identifier: "it"))

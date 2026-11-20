@@ -296,10 +296,11 @@ sample data (`ACME-0000-TEST-0000`, `user@example.com`) for previews and tests.
 
 ## Sample data
 
-The GUI runs on the in-memory fakes in `Sources/Fakes` until the data layer lands.
-`SampleData` and the preview helpers are compiled only in Debug: a Release build starts
-with an empty in-memory store and contains no sample values. When the data layer is ready,
-`SerialManagerApp.init` is the single place to swap the fakes for the real implementations.
+Debug builds and previews run on the in-memory fakes in `Sources/Fakes`. `SampleData` and
+the preview helpers are compiled only in Debug, so a Release build contains no sample values.
+A Release build uses the real repository instead: entries persist in SwiftData and serials in
+the Keychain (ticket #4). `SerialManagerApp.init` is the single place that picks the fakes or
+the real implementations.
 
 ## Known gaps
 
@@ -307,9 +308,18 @@ with an empty in-memory store and contains no sample values. When the data layer
   the form is up.
 - The "Main, loading" preview shows the loaded list almost at once: the fake repository
   answers immediately.
-- Release builds are an empty, non-persistent shell until the data layer lands. They use
-  `UnavailableBackupService`: Import and Export are disabled in the File menu, and the
-  service fails if reached anyway, so no build reports a backup that was never written.
+- Release builds persist entries: SwiftData for the entry fields, the Keychain for the
+  serials (ticket #4). Debug builds and previews stay on the in-memory fakes.
+- Release builds still use `UnavailableBackupService` until #9 and #10: Import and Export are
+  disabled in the File menu, and the service fails if reached anyway, so no build reports a
+  backup that was never written.
+- If the library file cannot be opened at launch, the window shows "Couldn't Load Licenses"
+  with a dedicated message (D8, D10), and creating, editing or deleting fails with the same
+  message. The app never falls back to an in-memory store. Try Again cannot succeed in that
+  state, because the repository is fixed at launch: the message says to quit and reopen. A
+  working Try Again is a follow-up.
+- Only two failures have a dedicated message: Keychain access denied, and the library file
+  that cannot be opened. Every other error shows the generic system text.
 
 ## Out of scope
 

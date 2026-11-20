@@ -521,6 +521,16 @@
         }
       }
     },
+    "Keychain access was denied. Try again, or check the Keychain permissions for SerialManager.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'accesso al Portachiavi è stato negato. Riprova, oppure controlla i permessi del Portachiavi per SerialManager."
+          }
+        }
+      }
+    },
     "License": {
       "localizations": {
         "it": {
@@ -727,6 +737,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Seriale copiato"
+          }
+        }
+      }
+    },
+    "SerialManager couldn't open its library file. Quit and reopen the app; if this keeps happening, check the disk.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SerialManager non è riuscito ad aprire il file dell'archivio. Esci e riapri l'app; se il problema si ripete, controlla il disco."
           }
         }
       }
