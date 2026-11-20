@@ -15,6 +15,10 @@ final class LicenseFormModel {
     /// True when the current serial could not be read: saving an empty serial would erase it.
     private(set) var serialUnreadable = false
     var errorMessage: String?
+    /// Which action set `errorMessage`, so the alert can name it (D3).
+    private(set) var failedAction: FailedAction = .save
+
+    enum FailedAction { case save, delete }
 
     init(license: LicenseSummary? = nil, draft: LicenseDraft? = nil) {
         self.license = license
@@ -56,6 +60,7 @@ final class LicenseFormModel {
             return false
         }
         if serialUnreadable, draft.serial.isEmpty {
+            failedAction = .save
             errorMessage = String(localized: "The current serial couldn't be read, so saving now would remove it. Enter the serial again, or close the form and try later.")
             return false
         }
@@ -65,6 +70,7 @@ final class LicenseFormModel {
             try await store.save(draft, id: license?.id)
             return true
         } catch {
+            failedAction = .save
             errorMessage = error.localizedDescription
             return false
         }
@@ -79,6 +85,7 @@ final class LicenseFormModel {
             try await store.delete(id: license.id)
             return true
         } catch {
+            failedAction = .delete
             errorMessage = error.localizedDescription
             return false
         }
