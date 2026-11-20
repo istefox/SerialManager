@@ -35,7 +35,16 @@ let project = Project(
             ]),
             sources: ["Sources/**"],
             resources: ["Resources/**"],
-            dependencies: []
+            // Data protection keychain (docs/adr/0003-keychain-implementation.md): a real
+            // development signature and the app's own keychain access group, authorized by a
+            // provisioning profile. CI builds with signing disabled.
+            entitlements: .dictionary([
+                "keychain-access-groups": ["$(AppIdentifierPrefix)\(bundlePrefix).\(projectName)"],
+            ]),
+            dependencies: [],
+            settings: .settings(base: [
+                "CODE_SIGN_IDENTITY": "Apple Development",
+            ])
         ),
         .target(
             name: "\(projectName)Tests",
