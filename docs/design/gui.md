@@ -353,3 +353,15 @@ needs a document type declaration and file-open handling, not built in v1 of the
 1. UI language: English and Italian from v1.
 2. Settings window: yes, with clipboard clearing only.
 3. Backup file extension: `.smbackup`.
+
+## App icon
+
+A brass key on a deep navy tile: the key's bit is a stepped code profile and its shaft is
+engraved with an obviously fake serial (`A1B2-C3D4`), so the "license key" reads literally.
+A row of faint dots along the bottom echoes the masked serial in the detail view.
+
+- Source: `docs/design/icon/AppIcon.svg` (1024 × 1024, macOS tile 824 × 824, radius 185).
+- PNGs in `Resources/Assets.xcassets/AppIcon.appiconset`, 16 to 1024 px, rendered from the
+  SVG with AppKit. Shadows are layered shape copies, not SVG filters, because AppKit's SVG
+  renderer ignores filters.
+- To change the icon, edit the SVG and render every size again.
