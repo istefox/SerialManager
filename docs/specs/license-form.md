@@ -1,6 +1,6 @@
 # SPEC: Create, edit and delete a license on persistent data (backlog #6)
 
-- Version: v1
+- Version: v1.1 (v1 approved 2026-11-20; v1.1 narrows the R6/R7 manual check, owner decision Q1, 2026-11-20)
 - Date: 2026-11-20
 - Status: approved by the owner on 2026-11-20
 - Related: `docs/design/gui.md` ("License form", "Contract with the data layer"),
@@ -49,6 +49,9 @@ correctly says "Couldn't Delete the License" (`ContentView.swift`).
   on a Release build that QA prepares and only the owner runs.
 - D3: the form's delete failure gets its own alert title, "Couldn't Delete the License".
   No other view change.
+- Q1 (v1.1): R6 and R7 are verified by automated tests and code review only; the manual
+  Release checklist marks them as not reproducible by hand. Verification method only, no
+  behaviour change.
 
 Settled elsewhere and not reopened here (backlog #4): the `LicenseRepository` signature is
 fixed; `update` with an empty serial deletes the serial item; `serial(for:)` returns nil for
@@ -106,9 +109,11 @@ Terms: "stored state" means what a NEW repository instance, built on the same
 - R9. The integration tests run in the existing unit test target, in CI, without touching
   the real Keychain, and use only obviously fake values (for example `ACME-0000-TEST-0000`,
   `user@example.com`). All existing tests stay green.
-- R10. QA writes a manual checklist for a Release build covering R1 to R8, using obviously
+- R10. QA writes a manual checklist for a Release build covering R1 to R5 and R8, using obviously
   fake values and ending with clean-up steps that delete every entry it creates. The owner
-  decides whether to run it; no agent runs it against the owner's Keychain.
+  decides whether to run it; no agent runs it against the owner's Keychain. R6 and R7 cannot be
+  triggered safely by hand on a Release build: the checklist states that they are covered by the
+  automated tests and code review, and why (Q1).
 
 ## Acceptance examples
 
@@ -146,7 +151,7 @@ Terms: "stored state" means what a NEW repository instance, built on the same
 | R4 | Integration tests (A4), plus the existing `unreadableSerialIsNotErasedOnSave` adapted to the real repository | QA on CI result |
 | R5 | Integration test for the delete path (A5); confirmation dialog by manual checklist | QA, owner |
 | R6 | Integration test with a failing serial store (A6) | QA on CI result |
-| R7 | Integration test (A7) for state; alert title by code review and manual checklist; string present in `Localizable.xcstrings` with Italian | Reviewer, QA |
+| R7 | Integration test (A7) for state; alert title by unit tests and code review (not by the manual checklist, Q1); string present in `Localizable.xcstrings` with Italian | Reviewer, QA |
 | R8 | Integration test: model edited and never saved leaves stored state unchanged (A8); discard dialog by manual checklist | QA, owner |
 | R9 | CI run green on the PR; grep the new tests for real Keychain types and non-fake values | Reviewer, QA |
 | R10 | Checklist file delivered and reviewed | QA, owner |
