@@ -156,7 +156,26 @@ File > Import Licenses... (`Cmd+Shift+I`).
    Without conflicts the import runs right away.
 5. Summary: imported N, replaced N, skipped N.
 
-States: Password entry, Wrong password, Corrupted file, Conflicts found, Importing, Done.
+States: Password entry, Wrong password, Corrupted file, Conflicts found, Importing, Done, Failed.
+
+Release builds run the real import (`EncryptedBackupService`, #10). Import is enabled also with an
+empty library, the new-Mac case.
+
+- **Skip** leaves every existing license exactly as it is, dates and serial included.
+- **Replace** overwrites every field and both dates with the backup's. The serial is replaced
+  only when the backup has one: a license the backup holds without a serial keeps its local
+  serial. An import never deletes a serial from the Keychain.
+- A license the backup holds without a serial is created with no Keychain item.
+- If a write fails during the import, the import stops there and keeps what it already wrote.
+  The sheet shows Import Failed with "The import stopped. Imported: N. Replaced: N." followed
+  by the error's own message, and the list is reloaded so the licenses already imported appear.
+  Importing the same file again shows them as conflicts.
+- The decrypted backup is kept in memory only between the password and the Import button of
+  the conflict step. Cancel at the password, checking or conflict step, and any other way the
+  sheet closes before Import (`Esc`, the sheet replaced), call `cancelImport()`, so the payload
+  is dropped at once (D5, SPEC 0010 R17). Once Import has started nothing is cancelled: Done and
+  Close only close the sheet. The sheet calls `ImportModel.close()` from `onDisappear` on its
+  root container, never on a `Group` or a phase branch, which would fire on a phase change.
 
 ## Menus and keyboard shortcuts
 
@@ -255,6 +274,13 @@ extension LicenseDraft {
     }
 }
 
+/// What `LicenseRepository.importLicense` did with one license of a backup.
+enum LicenseImportOutcome: Equatable, Sendable {
+    case created
+    case replaced
+    case skipped
+}
+
 protocol LicenseRepository: Sendable {
     func fetchAll() async throws -> [LicenseSummary]
     func create(_ draft: LicenseDraft) async throws -> LicenseSummary
@@ -262,6 +288,10 @@ protocol LicenseRepository: Sendable {
     func delete(id: UUID) async throws
     /// Returns nil when the Keychain item for this license is missing.
     func serial(for id: UUID) async throws -> String?
+    /// Writes one license read from a backup, keeping its id, fields and both dates. Looks the
+    /// id up first and never relies on the SwiftData upsert. Used by the import only.
+    func importLicense(_ license: LicenseSummary, serial: String?, policy: ConflictPolicy) async throws
+        -> LicenseImportOutcome
 }
 
 struct ExportSummary: Equatable, Sendable {
@@ -301,6 +331,9 @@ protocol BackupService: Sendable {
     func export(to url: URL, password: String) async throws -> ExportSummary
     func prepareImport(from url: URL, password: String) async throws -> ImportPreview
     func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary
+    /// Drops the payload kept by `prepareImport`, if any. Idempotent, never throws, writes nothing.
+    /// No default implementation: every conformer implements it.
+    func cancelImport() async
 }
 
 extension BackupService {
@@ -322,6 +355,12 @@ Semantics the data layer must keep:
   `applyImport` is called with the returned preview (the preview carries only counts, ids
   and the file URL). Errors: `BackupError` for a wrong password, a corrupted file or a newer
   format; any other error is shown as a generic failure.
+- `applyImport` uses the payload once: after it, or after `cancelImport()`, an apply with the
+  same preview fails with a generic error and writes nothing.
+- `importLicense` per license: no license with that id creates it (a nil or `""` serial writes
+  no Keychain item); `.skip` on an existing id changes nothing and touches no serial; `.replace`
+  replaces every field and both dates, and the serial only when non-nil and non-empty. It never
+  deletes a Keychain item that existed before the call; on failure it undoes its own write.
 
 `SerialStore` (Keychain) stays internal to the data layer: the GUI only sees
 `LicenseRepository`. The GUI ships in-memory fakes of both protocols with obviously fake
@@ -343,17 +382,27 @@ the real implementations.
   answers immediately.
 - Release builds persist entries: SwiftData for the entry fields, the Keychain for the
   serials (ticket #4). Debug builds and previews stay on the in-memory fakes.
-- Release builds use `EncryptedBackupService` (#9): Export writes the real encrypted backup,
-  Import stays disabled in the File menu until #10 (`isImportAvailable == false`) and the
-  service fails if reached anyway. `UnavailableBackupService` (both flags false) remains for
-  a build that must offer no backup at all.
+- Release builds use `EncryptedBackupService` (#9, #10) for Export and Import.
+  `UnavailableBackupService` (both flags false) remains for a build that must offer no backup
+  at all.
+- A backup file altered after export, whose header still passes the checks, reports "The
+  password is incorrect." like a wrong password: authenticated encryption cannot tell the two
+  apart (ADR 0002, accepted limit).
+- If the Keychain holds an orphan item under the id of a license that the import creates with
+  no serial (nil or `""` in the backup), the item is kept and the new license shows that
+  serial. Accepted: an import never deletes a Keychain item.
+- When the sheet closes while the password is being checked, `cancelImport()` runs at close and
+  once more when the check returns. If the user reopens Import on another file within that
+  moment (under a second), the late call can drop the new payload and its Import fails with the
+  generic error; importing again works. Accepted (plan 0010, review round 4).
 - If the library file cannot be opened at launch, the window shows "Couldn't Load Licenses"
   with a dedicated message (D8, D10), and creating, editing or deleting fails with the same
   message. The app never falls back to an in-memory store. Try Again cannot succeed in that
   state, because the repository is fixed at launch: the message says to quit and reopen. A
   working Try Again is a follow-up.
-- Only two failures have a dedicated message: Keychain access denied, and the library file
-  that cannot be opened. Every other error shows the generic system text.
+- Only three failures have a dedicated message: Keychain access denied, the library file
+  that cannot be opened, and an import stopped by a write error (its counts, then the
+  underlying message). Every other error shows the generic system text.
 
 ## Out of scope
 

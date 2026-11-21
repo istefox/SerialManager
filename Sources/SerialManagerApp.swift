@@ -4,9 +4,9 @@ import SwiftUI
 struct SerialManagerApp: App {
     // Release builds use the persistent library: entries in SwiftData, serials in the Keychain
     // (LicenseLibrary). If the library cannot be opened, the window shows its failure state
-    // instead of running on an in-memory store. Export writes the real encrypted backup
-    // (EncryptedBackupService, ADR 0002); Import stays disabled until #10 because the service
-    // reports isImportAvailable == false. Debug builds and previews run on in-memory fakes
+    // instead of running on an in-memory store. Export writes the real encrypted backup and
+    // Import restores it (EncryptedBackupService, ADR 0002): Import is enabled also with an
+    // empty library, the new-Mac case (#10). Debug builds and previews run on in-memory fakes
     // with fake sample data.
     @State private var store: LicenseStore
     @State private var router = AppRouter()

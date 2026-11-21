@@ -71,6 +71,10 @@ final class ImportModel {
 
     @ObservationIgnored private let service: any BackupService
     @ObservationIgnored private let store: LicenseStore
+    /// Set by `close()`: the sheet is gone, so a `prepareImport` still running must not move on (R17).
+    @ObservationIgnored private var isClosed = false
+    /// Set by `apply` before its first await: from then on closing the sheet cancels nothing (R17).
+    @ObservationIgnored private var applyStarted = false
 
     init(
         fileURL: URL, service: any BackupService, store: LicenseStore,
@@ -89,29 +93,55 @@ final class ImportModel {
         guard canUnlock else { return }
         phase = .checking
         backupError = nil
+        let result: Result<ImportPreview, any Error>
         do {
-            let preview = try await service.prepareImport(from: fileURL, password: password)
+            result = .success(try await service.prepareImport(from: fileURL, password: password))
+        } catch {
+            result = .failure(error)
+        }
+        // Closed while checking: write nothing and drop what this prepare may have kept. `close()`
+        // already cancelled, but the service may have run that cancel before this prepare
+        // (docs/plans/0010-encrypted-import-plan.md, 2.8); `cancelImport()` is idempotent.
+        if isClosed {
+            await service.cancelImport()
+            return
+        }
+        switch result {
+        case .success(let preview):
             if preview.conflictingIDs.isEmpty {
                 await apply(preview)
             } else {
                 phase = .conflicts(preview)
             }
-        } catch let error as BackupError {
+        case .failure(let error as BackupError):
             backupError = error
             phase = .password
-        } catch {
+        case .failure(let error):
             phase = .failed(error.localizedDescription)
         }
     }
 
     func apply(_ preview: ImportPreview) async {
+        applyStarted = true
         phase = .importing
         do {
             let summary = try await service.applyImport(preview, policy: policy)
             await store.load()
             phase = .done(summary)
         } catch {
+            // A partial import keeps what it wrote (D1): reload so the list shows it (R10).
+            await store.load()
             phase = .failed(error.localizedDescription)
         }
+    }
+
+    /// Called once when the sheet goes away, whatever closed it (Cancel, Esc, Done, Close).
+    /// Before `apply` started it drops the decrypted payload kept by the service (D5, R17);
+    /// after that it cancels nothing. Later calls do nothing.
+    func close() async {
+        guard !isClosed else { return }
+        isClosed = true
+        guard !applyStarted else { return }
+        await service.cancelImport()
     }
 }
