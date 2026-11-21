@@ -62,16 +62,31 @@ enum BackupFixtures {
     static func service(
         repository: any LicenseRepository = repository(),
         saltSource: (@Sendable (Int) throws -> Data)? = nil,
-        maxFileSize: Int = BackupFormat.maxBackupFileSize
+        maxFileSize: Int = BackupFormat.maxBackupFileSize,
+        stageProbe: (@Sendable (BackupStage) -> Void)? = nil
     ) -> EncryptedBackupService {
         EncryptedBackupService(
             repository: repository,
             saltSource: saltSource ?? { _ in salt },
             nonceSource: { nonce },
             now: { exportedAt },
-            maxFileSize: maxFileSize
+            maxFileSize: maxFileSize,
+            deriveKey: { password, salt, iterations in
+                stageProbe?(.keyDerivation)
+                return try BackupKeyDerivation.key(password: password, salt: salt, iterations: iterations)
+            },
+            seal: { plaintext, key, nonce, header in
+                stageProbe?(.encryption)
+                return try AES.GCM.seal(plaintext, using: key, nonce: nonce, authenticating: header)
+            }
         )
     }
+}
+
+/// The CPU-bound export stages a test can observe through `BackupFixtures.service(stageProbe:)`.
+enum BackupStage: Equatable, Sendable {
+    case keyDerivation
+    case encryption
 }
 
 /// A temporary directory for one test, removed by `remove()`.

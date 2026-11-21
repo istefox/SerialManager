@@ -14,24 +14,37 @@ actor EncryptedBackupService: BackupService {
     private let nonceSource: @Sendable () -> AES.GCM.Nonce
     private let now: @Sendable () -> Date
     private let maxFileSize: Int
+    private let deriveKey: @Sendable (String, Data, UInt32) throws -> SymmetricKey
+    private let seal: @Sendable (Data, SymmetricKey, AES.GCM.Nonce, Data) throws -> AES.GCM.SealedBox
 
     /// - Parameters:
     ///   - saltSource: random bytes for the salt; tests inject fixed bytes.
     ///   - nonceSource: the GCM nonce; tests inject a fixed one.
     ///   - now: the export date written in the payload.
     ///   - maxFileSize: tests only. Production code keeps the default, `BackupFormat.maxBackupFileSize`.
+    ///   - deriveKey: tests only. Production code keeps the default, `BackupKeyDerivation.key`.
+    ///   - seal: tests only. Production code keeps the default, AES-GCM sealing of the plaintext
+    ///     with the header as associated data.
     init(
         repository: any LicenseRepository,
         saltSource: @escaping @Sendable (Int) throws -> Data = BackupRandom.bytes,
         nonceSource: @escaping @Sendable () -> AES.GCM.Nonce = { AES.GCM.Nonce() },
         now: @escaping @Sendable () -> Date = { Date() },
-        maxFileSize: Int = BackupFormat.maxBackupFileSize
+        maxFileSize: Int = BackupFormat.maxBackupFileSize,
+        deriveKey: @escaping @Sendable (String, Data, UInt32) throws -> SymmetricKey = {
+            try BackupKeyDerivation.key(password: $0, salt: $1, iterations: $2)
+        },
+        seal: @escaping @Sendable (Data, SymmetricKey, AES.GCM.Nonce, Data) throws -> AES.GCM.SealedBox = {
+            try AES.GCM.seal($0, using: $1, nonce: $2, authenticating: $3)
+        }
     ) {
         self.repository = repository
         self.saltSource = saltSource
         self.nonceSource = nonceSource
         self.now = now
         self.maxFileSize = maxFileSize
+        self.deriveKey = deriveKey
+        self.seal = seal
     }
 
     nonisolated var isExportAvailable: Bool { true }
@@ -81,12 +94,12 @@ actor EncryptedBackupService: BackupService {
 
         // 6. Header and key.
         let header = BackupFormat.header(salt: salt, nonce: nonceBytes, ciphertextLength: ciphertextLength)
-        let key = try BackupKeyDerivation.key(password: password, salt: salt, iterations: BackupFormat.iterations)
+        let key = try deriveKey(password, salt, BackupFormat.iterations)
 
         // 7. Seal with the header as associated data.
         let sealed: AES.GCM.SealedBox
         do {
-            sealed = try AES.GCM.seal(plaintext, using: key, nonce: nonce, authenticating: header)
+            sealed = try seal(plaintext, key, nonce, header)
         } catch {
             throw BackupExportError.encryptionFailed
         }
