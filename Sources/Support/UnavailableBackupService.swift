@@ -24,4 +24,7 @@ struct UnavailableBackupService: BackupService {
     func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary {
         throw NotAvailable()
     }
+
+    /// Nothing is ever pending: `prepareImport` always fails.
+    func cancelImport() {}
 }

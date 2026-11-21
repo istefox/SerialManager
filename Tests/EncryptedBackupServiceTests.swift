@@ -349,20 +349,21 @@ struct EncryptedBackupServiceTests {
 
     // MARK: - Availability and import
 
-    @Test func exportIsAvailableAndImportIsNot() {
+    @Test func exportAndImportAreAvailable() {
         let service = EncryptedBackupService(repository: ScriptedLicenseRepository())
         #expect(service.isExportAvailable)
-        #expect(!service.isImportAvailable)
+        #expect(service.isImportAvailable)
     }
 
-    @Test func importMethodsThrowNotAvailable() async throws {
+    @Test func importOfAMissingFileRethrowsTheOpenErrorAndKeepsNothing() async throws {
         let service = EncryptedBackupService(repository: ScriptedLicenseRepository())
         let url = URL(filePath: "/nonexistent/Licenses.smbackup")
-        await #expect(throws: UnavailableBackupService.NotAvailable()) {
+        let error = await #expect(throws: (any Error).self) {
             try await service.prepareImport(from: url, password: F.password)
         }
+        #expect(!(error is BackupError))
         let preview = ImportPreview(fileURL: url, licenseCount: 0, conflictingIDs: [])
-        await #expect(throws: UnavailableBackupService.NotAvailable()) {
+        await #expect(throws: BackupImportError.noPendingImport) {
             try await service.applyImport(preview, policy: .skip)
         }
     }

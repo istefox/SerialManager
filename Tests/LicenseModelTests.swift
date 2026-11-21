@@ -231,4 +231,68 @@ struct LicenseModelTests {
         #expect(try fetch(id, in: container).count == 1)
         #expect(try count(in: container) == 1)
     }
+
+    // MARK: restore (import replace, SPEC 0010 D3; license model R4, R8)
+
+    @Test func restoreSetsEveryFieldAndBothDates() throws {
+        let container = try makeContainer()
+        let license = try insertExample(in: container)
+        let id = license.id
+        let created = Date(timeIntervalSinceReferenceDate: 700_000_000.250)
+        let updated = Date(timeIntervalSinceReferenceDate: 700_100_000.500)
+
+        try license.restore(
+            productName: "Restored App",
+            vendor: "Example Vendor",
+            registeredEmail: "user@example.com",
+            purchaseDate: tPlus1,
+            version: "3.1",
+            notes: "Fake notes",
+            createdAt: created,
+            updatedAt: updated
+        )
+        try container.mainContext.save()
+
+        let fetched = try #require(try fetch(id, in: container).first)
+        #expect(fetched.id == id)
+        #expect(fetched.productName == "Restored App")
+        #expect(fetched.vendor == "Example Vendor")
+        #expect(fetched.registeredEmail == "user@example.com")
+        #expect(fetched.purchaseDate == tPlus1)
+        #expect(fetched.version == "3.1")
+        #expect(fetched.notes == "Fake notes")
+        #expect(fetched.createdAt == created)
+        #expect(fetched.updatedAt == updated)
+    }
+
+    @Test(arguments: ["", "   ", "\n\t"])
+    func restoreRejectsBlankNameAndKeepsState(_ name: String) throws {
+        let container = try makeContainer()
+        let license = try insertExample(in: container)
+        let before = Snapshot(license)
+
+        #expect(throws: LicenseValidationError.emptyProductName) {
+            try license.restore(
+                productName: name,
+                vendor: "Other Vendor",
+                registeredEmail: "user@example.com",
+                purchaseDate: tPlus1,
+                version: "9.9",
+                notes: "Changed",
+                createdAt: tPlus1,
+                updatedAt: tPlus1
+            )
+        }
+
+        #expect(Snapshot(license) == before)
+        try container.mainContext.save()
+        let fetched = try #require(try fetch(before.id, in: container).first)
+        #expect(fetched == before)
+    }
+
+    @Test(arguments: ["", "   ", "\n\t", " a "])
+    func isValidProductNameAgreesWithDraft(_ name: String) {
+        let draft = LicenseDraft(productName: name)
+        #expect(License.isValidProductName(name) == draft.hasValidProductName)
+    }
 }

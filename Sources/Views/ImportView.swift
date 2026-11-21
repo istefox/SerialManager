@@ -6,7 +6,12 @@ struct ImportView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        Group {
+        // One stable container for the whole life of the sheet: `onDisappear` here fires only when
+        // the sheet closes. On a `Group` it would apply to each branch and fire on a phase change
+        // (Checking -> Conflicts), cancelling the import the user is about to confirm
+        // (docs/plans/0010-encrypted-import-plan.md, 2.8). Cancel buttons only dismiss: every way
+        // the sheet closes reaches `model.close()` through this.
+        VStack(spacing: 0) {
             switch model.phase {
             case .password, .checking:
                 passwordForm
@@ -35,6 +40,7 @@ struct ImportView: View {
             }
         }
         .frame(width: 460)
+        .onDisappear { Task { await model.close() } }
     }
 
     private var passwordForm: some View {
@@ -121,9 +127,17 @@ struct ImportView: View {
 @MainActor
 private func previewImport(_ phase: ImportModel.Phase = .password, error: BackupError? = nil) -> ImportView {
     let repository = InMemoryLicenseRepository.sample()
+    let service = InMemoryBackupService(
+        repository: repository,
+        importLicenseCount: samplePreview.licenseCount,
+        importConflicts: samplePreview.conflictingIDs)
+    if case .conflicts(let preview) = phase {
+        // The fake applies only a preview it prepared (R17): prepare it so Import works in the canvas.
+        Task { _ = try? await service.prepareImport(from: preview.fileURL, password: InMemoryBackupService.samplePassword) }
+    }
     let model = ImportModel(
         fileURL: URL(fileURLWithPath: "/tmp/SerialManager Backup 2026-01-01.smbackup"),
-        service: InMemoryBackupService(repository: repository),
+        service: service,
         store: LicenseStore(repository: repository, initial: SampleData.licenses),
         phase: phase,
         backupError: error

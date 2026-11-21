@@ -65,6 +65,30 @@ struct BackupPayload: Codable, Equatable, Sendable {
             )
         }
 
+        /// Every key of ADR 0002 section 6 must be present: `purchaseDate` and `serial` may be null
+        /// but not missing (a synthesized decoder would accept a missing optional key, plan 0010 F6).
+        /// Unknown keys are ignored. `serial` is kept as read: `""` stays `""` here and counts as no
+        /// serial when the import is applied.
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            for key in [CodingKeys.purchaseDate, .serial] where !container.contains(key) {
+                throw DecodingError.keyNotFound(
+                    key, DecodingError.Context(codingPath: container.codingPath, debugDescription: "Required key"))
+            }
+            self.init(
+                id: try container.decode(UUID.self, forKey: .id),
+                productName: try container.decode(String.self, forKey: .productName),
+                vendor: try container.decode(String.self, forKey: .vendor),
+                registeredEmail: try container.decode(String.self, forKey: .registeredEmail),
+                purchaseDate: try container.decodeIfPresent(Date.self, forKey: .purchaseDate),
+                version: try container.decode(String.self, forKey: .version),
+                notes: try container.decode(String.self, forKey: .notes),
+                createdAt: try container.decode(Date.self, forKey: .createdAt),
+                updatedAt: try container.decode(Date.self, forKey: .updatedAt),
+                serial: try container.decodeIfPresent(String.self, forKey: .serial)
+            )
+        }
+
         func encode(to encoder: any Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
@@ -105,15 +129,81 @@ struct BackupPayload: Codable, Equatable, Sendable {
         return encoder
     }
 
-    /// Decoder for the three-digit form written by `makeEncoder()`. Import (#10) widens it to the
-    /// form without fractional seconds and adds payload validation.
+    /// `yyyy-MM-dd'T'HH:mm:ss'Z'` in UTC, the form without fractional seconds.
+    static let wholeSecondDateStyle = Date.ISO8601FormatStyle()
+
+    /// Decoder of a backup payload. Accepts exactly the two date forms of ADR 0002 section 6:
+    /// `yyyy-MM-dd'T'HH:mm:ss.SSS'Z'` (written by `makeEncoder()`) and the same without fractional
+    /// seconds. Other digit counts and UTC offsets are rejected, although Foundation would parse
+    /// some of them (plan 0010, F7 and P1).
     static func makeDecoder() -> JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let text = try container.decode(String.self)
-            return try Date(text, strategy: dateStyle)
+            switch dateShape(of: text) {
+            case .fractional:
+                return try Date(text, strategy: dateStyle)
+            case .wholeSeconds:
+                return try Date(text, strategy: wholeSecondDateStyle)
+            case nil:
+                throw DecodingError.dataCorruptedError(
+                    in: container, debugDescription: "Date not in a form of ADR 0002 section 6")
+            }
         }
         return decoder
+    }
+
+    enum DateShape: Equatable {
+        /// `yyyy-MM-dd'T'HH:mm:ss.SSS'Z'`, 24 characters.
+        case fractional
+        /// `yyyy-MM-dd'T'HH:mm:ss'Z'`, 20 characters.
+        case wholeSeconds
+    }
+
+    /// Which accepted form `text` has, by position only (ASCII digits and separators); nil for any
+    /// other text. The calendar values are checked by the parse that follows.
+    static func dateShape(of text: String) -> DateShape? {
+        let bytes = Array(text.utf8)
+        let pattern: String
+        let shape: DateShape
+        switch bytes.count {
+        case 24:
+            pattern = "dddd-dd-ddTdd:dd:dd.dddZ"
+            shape = .fractional
+        case 20:
+            pattern = "dddd-dd-ddTdd:dd:ddZ"
+            shape = .wholeSeconds
+        default:
+            return nil
+        }
+        for (byte, expected) in zip(bytes, pattern.utf8) {
+            let matches = expected == UInt8(ascii: "d") ? (UInt8(ascii: "0")...UInt8(ascii: "9")).contains(byte) : byte == expected
+            if !matches { return nil }
+        }
+        return shape
+    }
+
+    /// Decodes and validates the plaintext of an import (ADR 0002 section 5, step 6). Pure, no I/O.
+    ///
+    /// Not UTF-8, not valid JSON for this version, a missing required key, a wrong type, an invalid
+    /// UUID or date, two licenses with the same `id`, or a blank product name (SPEC 0010, D2) give
+    /// `BackupError.corruptedFile`. The product name uses the model's own rule, so a payload that
+    /// passes here cannot be refused by `License` when it is applied.
+    static func decodeForImport(_ plaintext: Data) throws(BackupError) -> BackupPayload {
+        guard String(data: plaintext, encoding: .utf8) != nil else { throw .corruptedFile }
+        let payload: BackupPayload
+        do {
+            payload = try makeDecoder().decode(BackupPayload.self, from: plaintext)
+        } catch {
+            throw .corruptedFile
+        }
+        var ids = Set<UUID>()
+        for entry in payload.licenses {
+            guard ids.insert(entry.id).inserted, License.isValidProductName(entry.productName) else {
+                throw .corruptedFile
+            }
+        }
+        return payload
     }
 }

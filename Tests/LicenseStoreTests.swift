@@ -113,4 +113,62 @@ struct InMemoryBackupServiceTests {
         let summary = try await service.export(to: URL(fileURLWithPath: "/tmp/x.smbackup"), password: "p")
         #expect(summary == ExportSummary(licenseCount: SampleData.entries.count, missingSerialCount: 1))
     }
+
+    // MARK: cancelImport (R17, A15 on the fake)
+
+    private let importURL = URL(fileURLWithPath: "/tmp/x.smbackup")
+
+    @Test func applyAfterCancelFailsAndWritesNothing() async throws {
+        let repository = InMemoryLicenseRepository.sample()
+        let before = try await repository.fetchAll()
+        let service = InMemoryBackupService(repository: repository, importLicenseCount: 2)
+        let preview = try await service.prepareImport(from: importURL, password: InMemoryBackupService.samplePassword)
+
+        await service.cancelImport()
+
+        let error = await #expect(throws: (any Error).self) {
+            try await service.applyImport(preview, policy: .skip)
+        }
+        #expect(!(error is BackupError))
+        #expect(try await repository.fetchAll() == before)
+    }
+
+    @Test func cancelIsIdempotentAndSafeWithNothingPending() async throws {
+        let service = InMemoryBackupService(repository: .sample())
+        await service.cancelImport()
+        _ = try await service.prepareImport(from: importURL, password: InMemoryBackupService.samplePassword)
+        await service.cancelImport()
+        await service.cancelImport()
+    }
+
+    @Test func applyWithoutPrepareFails() async {
+        let service = InMemoryBackupService(repository: .sample())
+        let preview = ImportPreview(fileURL: importURL, licenseCount: 1, conflictingIDs: [])
+        await #expect(throws: (any Error).self) {
+            try await service.applyImport(preview, policy: .skip)
+        }
+    }
+
+    @Test func failedPrepareDropsTheEarlierPendingImport() async throws {
+        let service = InMemoryBackupService(repository: .sample())
+        let preview = try await service.prepareImport(from: importURL, password: InMemoryBackupService.samplePassword)
+        await #expect(throws: BackupError.wrongPassword) {
+            try await service.prepareImport(from: importURL, password: "nope")
+        }
+        await #expect(throws: (any Error).self) {
+            try await service.applyImport(preview, policy: .skip)
+        }
+    }
+
+    @Test func prepareAgainAfterCancelAllowsApply() async throws {
+        let service = InMemoryBackupService(repository: .sample(), importLicenseCount: 3)
+        _ = try await service.prepareImport(from: importURL, password: InMemoryBackupService.samplePassword)
+        await service.cancelImport()
+        let preview = try await service.prepareImport(from: importURL, password: InMemoryBackupService.samplePassword)
+        #expect(try await service.applyImport(preview, policy: .skip) == ImportSummary(imported: 3, replaced: 0, skipped: 0))
+    }
+
+    @Test func unavailableServiceCancelReturns() async {
+        await UnavailableBackupService().cancelImport()
+    }
 }
