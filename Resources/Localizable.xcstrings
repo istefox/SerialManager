@@ -841,6 +841,16 @@
         }
       }
     },
+    "The import stopped. Imported: %lld. Replaced: %lld.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'importazione si è interrotta. Importate: %lld. Sostituite: %lld."
+          }
+        }
+      }
+    },
     "The password is incorrect.": {
       "localizations": {
         "it": {

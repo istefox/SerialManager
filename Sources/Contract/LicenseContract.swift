@@ -58,6 +58,13 @@ extension LicenseDraft {
     }
 }
 
+/// What `LicenseRepository.importLicense` did with one license of a backup.
+enum LicenseImportOutcome: Equatable, Sendable {
+    case created
+    case replaced
+    case skipped
+}
+
 protocol LicenseRepository: Sendable {
     func fetchAll() async throws -> [LicenseSummary]
     func create(_ draft: LicenseDraft) async throws -> LicenseSummary
@@ -65,6 +72,18 @@ protocol LicenseRepository: Sendable {
     func delete(id: UUID) async throws
     /// Returns nil when the Keychain item for this license is missing.
     func serial(for id: UUID) async throws -> String?
+    /// Writes one license read from a backup, keeping its `id`, fields, `createdAt` and `updatedAt`
+    /// exactly as given (SPEC 0010, D3). Looks `license.id` up first and never relies on the
+    /// SwiftData upsert.
+    /// - No license with this id: creates it; `serial` non-nil and non-empty is saved, otherwise no
+    ///   Keychain item is written. Returns `.created`.
+    /// - Existing id, `.skip`: changes nothing, makes no serial store call. Returns `.skipped`.
+    /// - Existing id, `.replace`: replaces every field and both dates; the serial is replaced when
+    ///   non-nil and non-empty, kept otherwise. Returns `.replaced`.
+    /// Never removes a Keychain item that existed before the call. One license is one unit (D4): on
+    /// failure the call leaves no change of its own, except the documented compensation residue.
+    func importLicense(_ license: LicenseSummary, serial: String?, policy: ConflictPolicy) async throws
+        -> LicenseImportOutcome
 }
 
 struct ExportSummary: Equatable, Sendable {
@@ -104,6 +123,14 @@ protocol BackupService: Sendable {
     func export(to url: URL, password: String) async throws -> ExportSummary
     func prepareImport(from url: URL, password: String) async throws -> ImportPreview
     func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary
+    /// Drops the payload kept by `prepareImport`, if any (D5, R17). Idempotent, never throws, writes
+    /// nothing to the library or the Keychain, safe with no import in progress. After it, `applyImport`
+    /// with an earlier preview fails as in R11. A `prepareImport` running when this is called leaves no
+    /// pending payload once it returns. Does not stop or change an `applyImport` already running.
+    ///
+    /// No default implementation on purpose: a default no-op would let a conformer that keeps a
+    /// payload compile without dropping it.
+    func cancelImport() async
 }
 
 extension BackupService {

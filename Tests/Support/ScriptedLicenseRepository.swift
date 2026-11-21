@@ -48,4 +48,6 @@ actor ScriptedLicenseRepository: LicenseRepository {
     func create(_ draft: LicenseDraft) async throws -> LicenseSummary { throw Unsupported() }
     func update(id: UUID, with draft: LicenseDraft) async throws -> LicenseSummary { throw Unsupported() }
     func delete(id: UUID) async throws { throw Unsupported() }
+    func importLicense(_ license: LicenseSummary, serial: String?, policy: ConflictPolicy) async throws
+        -> LicenseImportOutcome { throw Unsupported() }
 }

@@ -1,9 +1,10 @@
 # SPEC: License model in SwiftData (backlog #2)
 
-- Version: v1.2 (v1 approved; v1.1 fills A8, which v1 delegated to the Architect; v1.2
-  revises R4 per owner decision D3)
-- Date: 2026-11-19
-- Status: approved by the owner on 2026-11-19
+- Version: v1.3 (v1 approved; v1.1 fills A8, which v1 delegated to the Architect; v1.2
+  revises R4 per owner decision D3; v1.3 adds the import `restore` path to R4 and R8, as a
+  consequence of decision D3 of `docs/specs/0010-encrypted-import.md`)
+- Date: 2026-11-21 (v1.3); 2026-11-19 (v1 to v1.2)
+- Status: v1.2 approved by the owner on 2026-11-19; v1.3 confirmed by the owner on 2026-11-21
 - Related: `docs/adr/0001-storage.md`, `docs/design/gui.md` ("Contract with the data layer"),
   `Sources/Contract/LicenseContract.swift`
 
@@ -57,9 +58,11 @@ A SwiftData model `License` with its validation rules, plus unit tests on an in-
 - R3. `productName` is required: creating or updating a `License` with an empty or
   whitespace-only product name fails with a typed error. The other fields may be left empty
   (`""`), and `purchaseDate` may be `nil`.
-- R4 (revised in v1.2, decision D3). Every stored property is `private(set)`: outside the
-  model, the only write paths are the throwing `init` and the throwing `update`, both of
-  which apply R3. Documented residue: SwiftData's public reflective API
+- R4 (revised in v1.2, decision D3; extended in v1.3). Every stored property is
+  `private(set)`: outside the model, the only write paths are the throwing `init`, the
+  throwing `update` and the throwing `restore`, all of which apply R3. `restore` exists only
+  for the import of a backup that replaces an existing license (SPEC 0010, D3): it sets every
+  field and both dates to the backup's values. App code edits a license through `update`. Documented residue: SwiftData's public reflective API
   (`PersistentModel.setValue(forKey:to:)`, `persistentBackingData`) can still write
   `productName` without validation, and no mechanism closes every such path (Architect
   prototype, 2026-11-19). The app code must not use that API on `License`: a grep for
@@ -72,9 +75,12 @@ A SwiftData model `License` with its validation rules, plus unit tests on an in-
   existing entry with its original identity.
 - R7. `id` is unique within the store. The Architect confirms how SwiftData on macOS 14
   enforces this and what happens on a duplicate insert before the acceptance check is fixed.
-- R8. `createdAt` is set once at creation and never changes. `updatedAt` equals `createdAt`
-  at creation and is set to the current time on every successful update. Creation accepts
-  caller-supplied `createdAt` and `updatedAt` (for import), with "now" as default.
+- R8 (extended in v1.3). `createdAt` is set once at creation and never changes, except when
+  an import replaces the license with the backup's dates through `restore` (SPEC 0010, D3).
+  `updatedAt` equals `createdAt` at creation and is set to the current time on every
+  successful update; `restore` sets it to the backup's value instead. Creation accepts
+  caller-supplied `createdAt` and `updatedAt` (for import), with "now" as default. A failed
+  `restore` (R3) leaves every field unchanged, as R9 requires for `update`.
 - R9. A failed update (R3) leaves every field of the entity unchanged, including `updatedAt`.
 - R10. Time is injectable (or passed in) so tests check timestamps deterministically, without
   sleeping or comparing against the wall clock.

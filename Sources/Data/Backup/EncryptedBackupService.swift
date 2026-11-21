@@ -1,14 +1,27 @@
 import CryptoKit
 import Foundation
 
-/// Real backup service: writes the encrypted export of docs/adr/0002-backup-format.md.
+/// Real backup service: writes and reads the encrypted backup of docs/adr/0002-backup-format.md.
 ///
-/// An actor, so the key derivation and the encryption never run on the main actor. Import is
-/// not available until #10: both import methods throw `UnavailableBackupService.NotAvailable`.
+/// An actor, so the key derivation, the encryption and the decryption never run on the main actor;
+/// the import reads the file in a detached task, so the actor stays free for `cancelImport()`.
 ///
-/// The password, the derived key and the plaintext are locals of `export(to:password:)`; they are
-/// never stored, logged or put in an error.
+/// The password and the derived key are locals, never stored, logged or put in an error. The export
+/// plaintext is a local of `export(to:password:)`. The decrypted import entries, serials included,
+/// are kept in memory between `prepareImport` and the next `applyImport`, `cancelImport()` or
+/// `prepareImport`, and never written anywhere but the library and the Keychain.
 actor EncryptedBackupService: BackupService {
+    /// The payload of the last successful `prepareImport`, waiting for `applyImport` (D5).
+    private struct PendingImport: Sendable {
+        let url: URL
+        let entries: [BackupPayload.Entry]
+    }
+
+    private var pendingImport: PendingImport?
+    /// Bumped by every `prepareImport` and `cancelImport()`: a prepare stores its payload only if
+    /// nothing bumped it while it was suspended (R17).
+    private var importGeneration = 0
+
     private let repository: any LicenseRepository
     private let saltSource: @Sendable (Int) throws -> Data
     private let nonceSource: @Sendable () -> AES.GCM.Nonce
@@ -49,8 +62,7 @@ actor EncryptedBackupService: BackupService {
 
     nonisolated var isExportAvailable: Bool { true }
 
-    /// Import is implemented by #10.
-    nonisolated var isImportAvailable: Bool { false }
+    nonisolated var isImportAvailable: Bool { true }
 
     /// Writes every license and its serial to `url`, encrypted with `password`.
     ///
@@ -117,11 +129,84 @@ actor EncryptedBackupService: BackupService {
         return ExportSummary(licenseCount: entries.count, missingSerialCount: missingSerialCount)
     }
 
+    /// Reads, decrypts and validates `url` (ADR 0002, section 5) and keeps its payload for
+    /// `applyImport`. Writes nothing (R4): the library is only read, to find the conflicts.
+    ///
+    /// Any earlier pending payload is dropped first (D5). If `cancelImport()` or another
+    /// `prepareImport` runs while this one is suspended, this one still returns its preview or its
+    /// error but keeps no payload (R17).
+    /// - Throws: `BackupError`, `BackupImportError.keyDerivationFailed`, the file's open or read
+    ///   error, or the repository's error, unchanged.
     func prepareImport(from url: URL, password: String) async throws -> ImportPreview {
-        throw UnavailableBackupService.NotAvailable()
+        pendingImport = nil
+        importGeneration &+= 1
+        let generation = importGeneration
+        let deriveKey = self.deriveKey
+        let payload = try await Task.detached {
+            try BackupReader.read(from: url, password: password, deriveKey: deriveKey)
+        }.value
+        let existing = Set(try await repository.fetchAll().map(\.id))
+        let conflicts = existing.intersection(payload.licenses.map(\.id))
+        if generation == importGeneration {
+            pendingImport = PendingImport(url: url, entries: payload.licenses)
+        }
+        return ImportPreview(fileURL: url, licenseCount: payload.licenses.count, conflictingIDs: conflicts)
     }
 
+    /// Writes the pending payload in file order, one repository call per license (D4), and stops at
+    /// the first failure (D1). Conflicts are decided per license by the repository at this moment,
+    /// not by the preview (R9).
+    ///
+    /// The payload is taken and dropped before the first suspension, whatever the outcome: a second
+    /// apply, or one after a failure, finds nothing (R11, D5).
+    /// - Throws: `BackupImportError.noPendingImport` when no payload matches `preview`;
+    ///   `BackupImportError.interrupted` when a write fails, the licenses written before it staying
+    ///   written.
     func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary {
-        throw UnavailableBackupService.NotAvailable()
+        let pending = pendingImport
+        pendingImport = nil
+        guard let pending, pending.url == preview.fileURL, pending.entries.count == preview.licenseCount else {
+            throw BackupImportError.noPendingImport
+        }
+        var imported = 0
+        var replaced = 0
+        var skipped = 0
+        for entry in pending.entries {
+            do {
+                switch try await repository.importLicense(entry.summary, serial: entry.serial, policy: policy) {
+                case .created: imported += 1
+                case .replaced: replaced += 1
+                case .skipped: skipped += 1
+                }
+            } catch {
+                throw BackupImportError.interrupted(
+                    imported: imported, replaced: replaced, underlyingMessage: error.localizedDescription)
+            }
+        }
+        return ImportSummary(imported: imported, replaced: replaced, skipped: skipped)
+    }
+
+    /// Drops the pending payload and stops a running `prepareImport` from keeping one (D5, R17).
+    /// Does not touch an `applyImport` already running: it took the payload before its first await.
+    func cancelImport() {
+        pendingImport = nil
+        importGeneration &+= 1
+    }
+}
+
+private extension BackupPayload.Entry {
+    /// The license fields of this entry, as `LicenseRepository.importLicense` takes them.
+    var summary: LicenseSummary {
+        LicenseSummary(
+            id: id,
+            productName: productName,
+            vendor: vendor,
+            registeredEmail: registeredEmail,
+            purchaseDate: purchaseDate,
+            version: version,
+            notes: notes,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
     }
 }

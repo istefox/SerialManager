@@ -80,6 +80,24 @@ actor InMemoryLicenseRepository: LicenseRepository {
         return serials[id]
     }
 
+    /// Same outcomes and serial rules as the SwiftData repository: `""` counts as no serial, a
+    /// stored serial is never removed, `.skip` changes nothing.
+    func importLicense(_ license: LicenseSummary, serial: String?, policy: ConflictPolicy) async throws
+        -> LicenseImportOutcome {
+        try check()
+        let outcome: LicenseImportOutcome
+        switch (licenses[license.id] != nil, policy) {
+        case (true, .skip): return .skipped
+        case (true, .replace): outcome = .replaced
+        case (false, _): outcome = .created
+        }
+        licenses[license.id] = license
+        if let serial, !serial.isEmpty {
+            serials[license.id] = serial
+        }
+        return outcome
+    }
+
     private func store(serial: String, for id: UUID) {
         serials[id] = serial.isEmpty ? nil : serial
     }

@@ -48,6 +48,7 @@ reinstalling software or moving to a new Mac quick and reliable.
 - 2026-11-18: storage decided (ADR 0001).
 - 2026-11-19: backup format decided (ADR 0002).
 - 2026-11-21: encrypted export shipped (#9, PR #11): File > Export writes an ADR 0002 v1 backup in Release builds; Import stays disabled until #10.
+- 2026-11-21: encrypted import shipped (#10, PR #16): File > Import restores an ADR 0002 v1 backup, also into an empty library, with Skip or Replace for licenses already present; an import never deletes a serial from the Keychain. The owner-run Release checklist (`docs/qa/encrypted-import-release-checklist.md`) and macOS 14 are still to be run.
 
 ## Open questions
 

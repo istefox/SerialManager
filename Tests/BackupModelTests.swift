@@ -82,6 +82,8 @@ private struct FailingExportService: BackupService {
     func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary {
         throw UnavailableBackupService.NotAvailable()
     }
+
+    func cancelImport() {}
 }
 
 @MainActor
@@ -137,6 +139,224 @@ struct ImportModelTests {
     @Test func emptyPasswordCannotUnlock() async {
         let model = await makeModel()
         #expect(!model.canUnlock)
+    }
+}
+
+/// `ImportModel` close and reload rules (docs/plans/0010-encrypted-import-plan.md, T4; SPEC R10, A17).
+@MainActor
+struct ImportModelCloseTests {
+    private let url = URL(fileURLWithPath: "/tmp/test.smbackup")
+
+    private func makeModel(
+        _ service: RecordingBackupService, repository: InMemoryLicenseRepository
+    ) async -> (ImportModel, LicenseStore) {
+        let store = LicenseStore(repository: repository)
+        await store.load()
+        let model = ImportModel(fileURL: url, service: service, store: store)
+        model.password = "sample-pass"
+        return (model, store)
+    }
+
+    @Test func failedApplyReloadsTheListAndShowsTheError() async throws {
+        let repository = InMemoryLicenseRepository()
+        let service = RecordingBackupService(repository: repository, failsApply: true)
+        let (model, store) = await makeModel(service, repository: repository)
+        #expect(store.licenses.isEmpty)
+
+        await model.unlock()
+
+        #expect(store.licenses.map(\.productName) == [RecordingBackupService.writtenName])
+        #expect(model.phase == .failed(StoppedImport().localizedDescription))
+    }
+
+    @Test func closeAtPasswordCancelsOnce() async {
+        let repository = InMemoryLicenseRepository()
+        let service = RecordingBackupService(repository: repository)
+        let (model, _) = await makeModel(service, repository: repository)
+
+        await model.close()
+
+        #expect(await service.cancelCount == 1)
+    }
+
+    @Test func closeAtConflictsCancelsOnce() async {
+        let repository = InMemoryLicenseRepository()
+        let service = RecordingBackupService(repository: repository, conflicts: [UUID()])
+        let (model, _) = await makeModel(service, repository: repository)
+        await model.unlock()
+        guard case .conflicts = model.phase else {
+            Issue.record("expected conflicts phase")
+            return
+        }
+
+        await model.close()
+
+        #expect(await service.cancelCount == 1)
+        #expect(await service.applyCount == 0)
+    }
+
+    @Test func closeTwiceCancelsOnce() async {
+        let repository = InMemoryLicenseRepository()
+        let service = RecordingBackupService(repository: repository)
+        let (model, _) = await makeModel(service, repository: repository)
+
+        await model.close()
+        await model.close()
+
+        #expect(await service.cancelCount == 1)
+    }
+
+    /// Closed while `prepareImport` runs: one cancel at close, one more when it returns (plan 2.8),
+    /// no apply, and the phase stays where it was, whatever the prepare returns.
+    @Test(arguments: [
+        CheckingOutcome.noConflicts, CheckingOutcome.conflicts, CheckingOutcome.wrongPassword,
+    ])
+    func closeWhileCheckingCancelsAndWritesNothing(outcome: CheckingOutcome) async {
+        let repository = InMemoryLicenseRepository()
+        let service = RecordingBackupService(
+            repository: repository,
+            conflicts: outcome == .conflicts ? [UUID()] : [],
+            prepareError: outcome == .wrongPassword ? .wrongPassword : nil,
+            holdsPrepare: true)
+        let (model, store) = await makeModel(service, repository: repository)
+        var entered = service.prepareEntered.makeAsyncIterator()
+
+        let unlock = Task { await model.unlock() }
+        await entered.next()
+        #expect(model.phase == .checking)
+
+        await model.close()
+        #expect(await service.cancelCount == 1)
+
+        await service.releasePrepare()
+        await unlock.value
+
+        #expect(await service.cancelCount == 2)
+        #expect(await service.applyCount == 0)
+        #expect(model.phase == .checking)
+        #expect(model.backupError == nil)
+        #expect(store.licenses.isEmpty)
+    }
+
+    @Test func closeAfterDoneCancelsNothing() async {
+        let repository = InMemoryLicenseRepository()
+        let service = RecordingBackupService(repository: repository)
+        let (model, _) = await makeModel(service, repository: repository)
+        await model.unlock()
+        #expect(model.phase == .done(ImportSummary(imported: 1, replaced: 0, skipped: 0)))
+
+        await model.close()
+
+        #expect(await service.cancelCount == 0)
+    }
+
+    @Test func closeAfterFailedApplyCancelsNothing() async {
+        let repository = InMemoryLicenseRepository()
+        let service = RecordingBackupService(repository: repository, failsApply: true)
+        let (model, _) = await makeModel(service, repository: repository)
+        await model.unlock()
+        guard case .failed = model.phase else {
+            Issue.record("expected failed phase")
+            return
+        }
+
+        await model.close()
+
+        #expect(await service.cancelCount == 0)
+    }
+
+    @Test func forwardPathNeverCancels() async {
+        let repository = InMemoryLicenseRepository()
+        let service = RecordingBackupService(repository: repository, conflicts: [UUID()])
+        let (model, _) = await makeModel(service, repository: repository)
+
+        await model.unlock()
+        guard case .conflicts(let preview) = model.phase else {
+            Issue.record("expected conflicts phase")
+            return
+        }
+        await model.apply(preview)
+
+        #expect(model.phase == .done(ImportSummary(imported: 0, replaced: 0, skipped: 1)))
+        #expect(await service.cancelCount == 0)
+        #expect(await service.applyCount == 1)
+    }
+}
+
+enum CheckingOutcome: Sendable {
+    case noConflicts
+    case conflicts
+    case wrongPassword
+}
+
+/// Test-only stop of an apply, standing in for the service's partial-failure error.
+struct StoppedImport: LocalizedError {
+    var errorDescription: String? { "Sample stop after one license." }
+}
+
+/// `BackupService` that records `cancelImport()` and `applyImport` calls, can hold `prepareImport`
+/// until released, and can make `applyImport` write one license and then throw.
+private actor RecordingBackupService: BackupService {
+    static let writtenName = "Sample Written Before Stop"
+
+    private(set) var cancelCount = 0
+    private(set) var applyCount = 0
+    nonisolated let prepareEntered: AsyncStream<Void>
+    private let enteredContinuation: AsyncStream<Void>.Continuation
+
+    private let repository: InMemoryLicenseRepository
+    private let conflicts: Set<UUID>
+    private let prepareError: BackupError?
+    private let failsApply: Bool
+    private var holdsPrepare: Bool
+    private var held: CheckedContinuation<Void, Never>?
+
+    init(
+        repository: InMemoryLicenseRepository, conflicts: Set<UUID> = [], prepareError: BackupError? = nil,
+        failsApply: Bool = false, holdsPrepare: Bool = false
+    ) {
+        self.repository = repository
+        self.conflicts = conflicts
+        self.prepareError = prepareError
+        self.failsApply = failsApply
+        self.holdsPrepare = holdsPrepare
+        (prepareEntered, enteredContinuation) = AsyncStream.makeStream()
+    }
+
+    func export(to url: URL, password: String) async throws -> ExportSummary {
+        ExportSummary(licenseCount: 0, missingSerialCount: 0)
+    }
+
+    func prepareImport(from url: URL, password: String) async throws -> ImportPreview {
+        enteredContinuation.yield()
+        if holdsPrepare {
+            await withCheckedContinuation { held = $0 }
+        }
+        if let prepareError { throw prepareError }
+        return ImportPreview(fileURL: url, licenseCount: 1, conflictingIDs: conflicts)
+    }
+
+    func releasePrepare() {
+        holdsPrepare = false
+        held?.resume()
+        held = nil
+    }
+
+    func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary {
+        applyCount += 1
+        if failsApply {
+            _ = try await repository.create(LicenseDraft(productName: Self.writtenName, serial: "FAKE-0000-0000-0001"))
+            throw StoppedImport()
+        }
+        let fresh = preview.licenseCount - preview.conflictingIDs.count
+        switch policy {
+        case .skip: return ImportSummary(imported: fresh, replaced: 0, skipped: preview.conflictingIDs.count)
+        case .replace: return ImportSummary(imported: fresh, replaced: preview.conflictingIDs.count, skipped: 0)
+        }
+    }
+
+    func cancelImport() {
+        cancelCount += 1
     }
 }
 

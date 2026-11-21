@@ -197,6 +197,156 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
         }
     }
 
+    // MARK: Import
+
+    /// Writes one license of a backup (plan 0010, 2.3). See `LicenseRepository.importLicense`.
+    ///
+    /// Runs under the mutation lock (I3), so no other mutation slips between the id lookup and the
+    /// write, and the SwiftData upsert on `@Attribute(.unique)` is never what decides a conflict.
+    /// The serial rules are its own: `applySerial` and `restoreSerial` are not reused, because an
+    /// import never removes a Keychain item that existed before the call (plan 0010, F4).
+    func importLicense(_ record: LicenseSummary, serial: String?, policy: ConflictPolicy) async throws
+        -> LicenseImportOutcome {
+        await acquireMutationLock()
+        defer { releaseMutationLock() }
+
+        // Same rule as `License.validate`, checked before any write in both branches.
+        guard License.isValidProductName(record.productName) else {
+            throw LicenseValidationError.emptyProductName
+        }
+        // `""` counts as no serial (ADR 0002).
+        let wanted = serial.flatMap { $0.isEmpty ? nil : $0 }
+
+        let exists = try fetchLicense(record.id) != nil
+        switch (exists, policy) {
+        case (true, .skip):
+            // No serial store call and no context change.
+            return .skipped
+        case (true, .replace):
+            try await replaceImported(record, serial: wanted)
+            return .replaced
+        case (false, _):
+            try await createImported(record, serial: wanted)
+            return .created
+        }
+    }
+
+    /// Create branch: the id has no license.
+    ///
+    /// With no serial in the file, an orphan item already stored under this id stays in place and the
+    /// new license shows it. Accepted edge (plan 0010, 2.3): an import never removes an item it did not
+    /// create.
+    private func createImported(_ record: LicenseSummary, serial wanted: String?) async throws {
+        let id = record.id
+        // Built before any write: validation cannot fail after the serial step.
+        let license = try License(
+            id: id,
+            productName: record.productName,
+            vendor: record.vendor,
+            registeredEmail: record.registeredEmail,
+            purchaseDate: record.purchaseDate,
+            version: record.version,
+            notes: record.notes,
+            createdAt: record.createdAt,
+            updatedAt: record.updatedAt
+        )
+
+        let written = try await writeImportedSerial(wanted, for: id)
+
+        // I2: look the id up again after the serial store step (defensive under I3).
+        let found: License?
+        do {
+            found = try fetchLicense(id)
+        } catch {
+            await undoImportedSerial(written, for: id)
+            throw error
+        }
+        guard found == nil else {
+            await undoImportedSerial(written, for: id)
+            throw LicenseRepositoryError.duplicateID(id)
+        }
+
+        do {
+            modelContext.insert(license)
+            try persist()
+        } catch {
+            modelContext.rollback()
+            await undoImportedSerial(written, for: id)
+            throw error
+        }
+    }
+
+    /// Replace branch: every field and both dates come from the backup (D3). The local serial is
+    /// kept when the file has none.
+    private func replaceImported(_ record: LicenseSummary, serial wanted: String?) async throws {
+        let id = record.id
+        let written = try await writeImportedSerial(wanted, for: id)
+
+        // I2: fetch again after the serial store step.
+        let found: License?
+        do {
+            found = try fetchLicense(id)
+        } catch {
+            await undoImportedSerial(written, for: id)
+            throw error
+        }
+        guard let license = found else {
+            // Defensive: unreachable under I3.
+            await undoImportedSerial(written, for: id)
+            throw LicenseRepositoryError.notFound(id)
+        }
+
+        do {
+            try license.restore(
+                productName: record.productName,
+                vendor: record.vendor,
+                registeredEmail: record.registeredEmail,
+                purchaseDate: record.purchaseDate,
+                version: record.version,
+                notes: record.notes,
+                createdAt: record.createdAt,
+                updatedAt: record.updatedAt
+            )
+            try persist()
+        } catch {
+            modelContext.rollback()
+            await undoImportedSerial(written, for: id)
+            throw error
+        }
+    }
+
+    /// Saves `wanted` for `id`, reading the previous value first (also for a new license: an orphan
+    /// item may exist, plan 0010 F5). Returns what the store held before when this call wrote, nil
+    /// when it wrote nothing (no serial in the file, or the same value already stored).
+    /// `.undecodableData` on the read does not block the write; any other read error stops before it.
+    private func writeImportedSerial(_ wanted: String?, for id: UUID) async throws -> PreviousSerial? {
+        guard let wanted else { return nil }
+        let previous = try await readPreviousSerial(for: id)
+        if case .value(let current) = previous, current == wanted { return nil }
+        try await serials.save(wanted, for: id)
+        return previous
+    }
+
+    /// D4 undo of the serial written by this same import call, run after `rollback()`. Errors are
+    /// discarded and the caller throws the original error; a failed undo leaves residue, as for
+    /// `create` and `update` (R12).
+    private func undoImportedSerial(_ previous: PreviousSerial?, for id: UUID) async {
+        switch previous {
+        case nil:
+            // This call wrote nothing.
+            break
+        case .absent?:
+            // The item did not exist before this call: remove only what this call created.
+            try? await serials.deleteSerial(for: id)
+        case .value(let old)?:
+            // Puts back the item that existed before (a replaced license, or an orphan).
+            try? await serials.save(old, for: id)
+        case .unreadable?:
+            // The previous value is unknown: the new value stays (D9 of plan 0004).
+            break
+        }
+    }
+
     // MARK: Helpers
 
     /// What the serial store held before a change. Unreadable is kept apart from absent (D9).

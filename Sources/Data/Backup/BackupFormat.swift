@@ -21,6 +21,14 @@ enum BackupFormat {
     /// Cap on the whole file, enforced by export and import alike: 64 MiB.
     static let maxBackupFileSize = 67_108_864
 
+    /// Iteration counts import accepts (ADR 0002, section 4). Not injectable: tests derive at the
+    /// real floor.
+    static let importIterationRange: ClosedRange<UInt32> = 600_000...10_000_000
+    /// Salt lengths import accepts (ADR 0002, section 4).
+    static let importSaltLengthRange: ClosedRange<Int> = 16...64
+    /// Bytes import reads first: magic and version (ADR 0002, section 5, step 1).
+    static let firstReadLength = 10
+
     /// Bytes of the header that do not depend on the salt length:
     /// magic 8, version 2, KDF id 1, iterations 4, salt length 1, cipher id 1, nonce 12, length 4.
     static let fixedHeaderLength = 33
