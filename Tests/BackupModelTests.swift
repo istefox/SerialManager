@@ -96,8 +96,12 @@ struct UnavailableBackupServiceTests {
     private let url = URL(fileURLWithPath: "/tmp/test.smbackup")
 
     @Test func reportsItselfUnavailable() {
-        #expect(!UnavailableBackupService().isAvailable)
-        #expect(InMemoryBackupService(repository: InMemoryLicenseRepository()).isAvailable)
+        let unavailable: any BackupService = UnavailableBackupService()
+        #expect(!unavailable.isExportAvailable)
+        #expect(!unavailable.isImportAvailable)
+        let fake: any BackupService = InMemoryBackupService(repository: InMemoryLicenseRepository())
+        #expect(fake.isExportAvailable)
+        #expect(fake.isImportAvailable)
     }
 
     @Test func exportFailsInsteadOfClaimingSuccess() async {

@@ -34,7 +34,11 @@ struct SerialManagerApp: App {
             ContentView(store: store, router: router, backupService: backupService)
         }
         .commands {
-            AppCommands(store: store, router: router, backupAvailable: backupService.isAvailable)
+            AppCommands(
+                store: store,
+                router: router,
+                exportAvailable: backupService.isExportAvailable,
+                importAvailable: backupService.isImportAvailable)
         }
 
         Settings {

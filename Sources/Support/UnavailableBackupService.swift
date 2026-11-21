@@ -10,6 +10,9 @@ struct UnavailableBackupService: BackupService {
         }
     }
 
+    var isExportAvailable: Bool { false }
+    var isImportAvailable: Bool { false }
+
     func export(to url: URL, password: String) async throws -> ExportSummary {
         throw NotAvailable()
     }
@@ -21,10 +24,4 @@ struct UnavailableBackupService: BackupService {
     func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary {
         throw NotAvailable()
     }
-}
-
-extension BackupService {
-    /// False for the placeholder used before the real backup exists: menus hide nothing,
-    /// they just disable Import and Export.
-    var isAvailable: Bool { !(self is UnavailableBackupService) }
 }
