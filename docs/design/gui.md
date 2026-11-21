@@ -340,10 +340,10 @@ the real implementations.
   answers immediately.
 - Release builds persist entries: SwiftData for the entry fields, the Keychain for the
   serials (ticket #4). Debug builds and previews stay on the in-memory fakes.
-- Release builds still use `UnavailableBackupService` (both flags false) until the real
-  service is wired (#9): Import and Export are disabled in the File menu, and the service fails
-  if reached anyway, so no build reports a backup that was never written. Once #9 is wired,
-  Export is real in Release and Import stays disabled until #10.
+- Release builds use `EncryptedBackupService` (#9): Export writes the real encrypted backup,
+  Import stays disabled in the File menu until #10 (`isImportAvailable == false`) and the
+  service fails if reached anyway. `UnavailableBackupService` (both flags false) remains for
+  a build that must offer no backup at all.
 - If the library file cannot be opened at launch, the window shows "Couldn't Load Licenses"
   with a dedicated message (D8, D10), and creating, editing or deleting fails with the same
   message. The app never falls back to an in-memory store. Try Again cannot succeed in that
