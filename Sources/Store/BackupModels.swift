@@ -23,10 +23,17 @@ final class ExportModel {
         self.phase = phase
     }
 
+    /// Shortest accepted password, counted in `Character`s with no trimming (ADR 0002 section 8).
+    /// The hint in `ExportView` repeats this number in a fixed catalog string:
+    /// "Use at least 12 characters." Change the two together.
+    static let minimumPasswordLength = 12
+
     /// True once the user typed a confirmation that differs from the password.
     var showsMismatch: Bool { !confirmation.isEmpty && password != confirmation }
 
-    var canExport: Bool { !password.isEmpty && password == confirmation && phase == .entering }
+    var canExport: Bool {
+        password.count >= Self.minimumPasswordLength && password == confirmation && phase == .entering
+    }
 
     func export(to url: URL) async {
         guard canExport else { return }

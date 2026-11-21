@@ -97,7 +97,16 @@ enum BackupError: Error, Equatable {
 }
 
 protocol BackupService: Sendable {
+    /// False while the File menu must keep Export disabled for this service.
+    var isExportAvailable: Bool { get }
+    /// False while the File menu must keep Import disabled for this service.
+    var isImportAvailable: Bool { get }
     func export(to url: URL, password: String) async throws -> ExportSummary
     func prepareImport(from url: URL, password: String) async throws -> ImportPreview
     func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary
+}
+
+extension BackupService {
+    var isExportAvailable: Bool { true }
+    var isImportAvailable: Bool { true }
 }
