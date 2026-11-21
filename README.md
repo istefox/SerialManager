@@ -33,7 +33,8 @@ signed with an Apple Development team. `Project.swift` pins the owner's team in
 `DEVELOPMENT_TEAM`: if you build with your own Apple account, set your team there first.
 
 The Debug build (the `build` command below, or Run in Xcode with the Debug configuration) is for
-development only: it shows fake sample data and keeps nothing you type.
+development only: it shows fake sample data and keeps nothing you type, and Export writes no
+file.
 
 ## Using SerialManager
 
@@ -68,7 +69,7 @@ reads Show Serial, Mostra seriale) to read it, or press `Cmd+Shift+R` (License >
 Serial, Mostra o nascondi seriale). To copy it, click Copy (Copia) or press `Cmd+Shift+C`
 (License > Copy Serial, Copia seriale).
 
-The copied serial is removed from the clipboard after the delay chosen in Settings > Clear
+The copied serial is removed from the clipboard after the delay chosen in Settings (Impostazioni) > Clear
 Clipboard (Svuota appunti): After 30 Seconds (Dopo 30 secondi), After 1 Minute (Dopo 1 minuto,
 the default), After 2 Minutes (Dopo 2 minuti) or Never (Mai). The app clears the clipboard
 only if it still holds that serial: anything you copy afterwards is left alone.
@@ -103,10 +104,12 @@ your password manager.
 4. The summary shows how many licenses were Imported (Importate), Replaced (Sostituite) and
    Skipped (Saltate).
 
+Clicking Cancel (Annulla) at any point before the last Import (Importa) writes nothing.
+
 A wrong password ("The password is incorrect.", La password non è corretta.), a file that is not
 a SerialManager backup, or a backup made by a newer version of the app changes nothing. If an
-error stops the import part way, the licenses imported before it stay, and the message says how
-many.
+error stops the import part way, the licenses imported or replaced before it stay, and the message
+says how many.
 
 ### Moving to another Mac
 
