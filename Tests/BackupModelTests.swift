@@ -82,6 +82,8 @@ private struct FailingExportService: BackupService {
     func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary {
         throw UnavailableBackupService.NotAvailable()
     }
+
+    func cancelImport() {}
 }
 
 @MainActor

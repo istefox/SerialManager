@@ -104,6 +104,14 @@ protocol BackupService: Sendable {
     func export(to url: URL, password: String) async throws -> ExportSummary
     func prepareImport(from url: URL, password: String) async throws -> ImportPreview
     func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary
+    /// Drops the payload kept by `prepareImport`, if any (D5, R17). Idempotent, never throws, writes
+    /// nothing to the library or the Keychain, safe with no import in progress. After it, `applyImport`
+    /// with an earlier preview fails as in R11. A `prepareImport` running when this is called leaves no
+    /// pending payload once it returns. Does not stop or change an `applyImport` already running.
+    ///
+    /// No default implementation on purpose: a default no-op would let a conformer that keeps a
+    /// payload compile without dropping it.
+    func cancelImport() async
 }
 
 extension BackupService {

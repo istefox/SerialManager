@@ -124,4 +124,7 @@ actor EncryptedBackupService: BackupService {
     func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary {
         throw UnavailableBackupService.NotAvailable()
     }
+
+    /// No payload is kept until import lands (T3 of #10 replaces this body).
+    func cancelImport() {}
 }
