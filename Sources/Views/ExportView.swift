@@ -45,6 +45,10 @@ struct ExportView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 SecureField("Password", text: $model.password)
                 SecureField("Confirm Password", text: $model.confirmation)
+                // Repeats ExportModel.minimumPasswordLength: change the two together.
+                Text("Use at least 12 characters.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
                 if model.showsMismatch {
                     Label("The passwords don't match.", systemImage: "exclamationmark.circle.fill")
                         .foregroundStyle(.red)
@@ -107,10 +111,17 @@ private let previewService = InMemoryBackupService(repository: .sample())
     ExportView(model: ExportModel(service: previewService))
 }
 
+#Preview("Export, short password") {
+    let model = ExportModel(service: previewService)
+    model.password = "short-pass"
+    model.confirmation = "short-pass"
+    return ExportView(model: model)
+}
+
 #Preview("Export, mismatch") {
     let model = ExportModel(service: previewService)
-    model.password = "sample-one"
-    model.confirmation = "sample-two"
+    model.password = "sample-backup-one"
+    model.confirmation = "sample-backup-two"
     return ExportView(model: model)
 }
 

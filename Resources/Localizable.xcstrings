@@ -811,6 +811,26 @@
         }
       }
     },
+    "The backup couldn't be encrypted. Try again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stato possibile cifrare il backup. Riprova."
+          }
+        }
+      }
+    },
+    "The backup is larger than 64 MB, the maximum size.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il backup supera i 64 MB, la dimensione massima."
+          }
+        }
+      }
+    },
     "The current serial couldn't be read, so saving now would remove it. Enter the serial again, or close the form and try later.": {
       "localizations": {
         "it": {
@@ -887,6 +907,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Riprova"
+          }
+        }
+      }
+    },
+    "Use at least 12 characters.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa almeno 12 caratteri."
           }
         }
       }

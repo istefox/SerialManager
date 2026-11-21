@@ -111,16 +111,34 @@ Sheets have no title bar on macOS, so each sheet shows its title in a `SheetHead
 
 ## Export
 
-File > Export Licenses... (`Cmd+Shift+E`), disabled when there are no licenses.
+File > Export Licenses... (`Cmd+Shift+E`), disabled when there are no licenses or the
+backup service reports `isExportAvailable == false`.
 
-1. Sheet: explanation ("The backup contains all licenses and serials, encrypted with this
-   password. You need it to restore the backup."), Password, Confirm password.
-   Export is disabled until both are non-empty and equal; mismatch shows an inline message.
+1. Sheet: explanation ("The backup contains all your licenses and serials, encrypted with
+   this password. You need it to restore the backup: it can't be recovered if you forget it."),
+   Password, Confirm Password, and a permanent hint under the fields: "Use at least 12
+   characters." (`.callout`, secondary).
+   Export is disabled until the password has at least 12 characters and the confirmation is
+   equal. Characters are Swift `Character`s (an accent typed as a combining mark does not count
+   on its own), with no trimming: spaces count. `ExportModel.minimumPasswordLength` holds the
+   number; the hint repeats it, so the two change together. A mismatch shows an inline message.
 2. System save panel, default name `SerialManager Backup YYYY-MM-DD.smbackup`.
 3. Summary: "Exported 12 licenses." and "Without a serial in the Keychain: 1", plus
    "Show in Finder".
 
-States: Entering password, Mismatch, Exporting (progress), Done (summary), Failed (alert).
+States: Entering password, Password too short (Export disabled, hint visible), Mismatch,
+Exporting (progress), Done (summary), Failed.
+
+Failed is a state of the sheet, not an alert: an icon, "Export Failed", the error message, and
+Cancel or Try Again. Try Again returns to the password form with both fields kept. Messages:
+
+- File too large: "The backup is larger than 64 MB, the maximum size."
+- Encryption failure (system error, not user input): "The backup couldn't be encrypted. Try again."
+- A serial can't be read from the Keychain: the export stops, no file is written, and the
+  sheet shows the existing Keychain message ("Keychain access was denied...").
+- Library or file write errors: the existing message of that error, unchanged.
+
+In every failure the destination file is neither created nor modified.
 
 ## Import
 
@@ -273,9 +291,18 @@ enum BackupError: Error, Equatable {
 }
 
 protocol BackupService: Sendable {
+    /// False while the File menu must keep Export disabled for this service.
+    var isExportAvailable: Bool { get }
+    /// False while the File menu must keep Import disabled for this service.
+    var isImportAvailable: Bool { get }
     func export(to url: URL, password: String) async throws -> ExportSummary
     func prepareImport(from url: URL, password: String) async throws -> ImportPreview
     func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary
+}
+
+extension BackupService {
+    var isExportAvailable: Bool { true }
+    var isImportAvailable: Bool { true }
 }
 ```
 
@@ -285,6 +312,9 @@ Semantics the data layer must keep:
   The form refuses to save an empty serial when the current one could not be read, so a
   Keychain read error never turns into a silent delete.
 - `fetchAll()` order does not matter: the GUI sorts by product name.
+- `isExportAvailable` and `isImportAvailable` are protocol requirements, so a concrete
+  service's values are seen through `any BackupService` (an actor declares them `nonisolated`).
+  The File menu enables Export and Import from them separately.
 - `prepareImport` decrypts and validates the file and must keep the decrypted payload until
   `applyImport` is called with the returned preview (the preview carries only counts, ids
   and the file URL). Errors: `BackupError` for a wrong password, a corrupted file or a newer
@@ -310,9 +340,10 @@ the real implementations.
   answers immediately.
 - Release builds persist entries: SwiftData for the entry fields, the Keychain for the
   serials (ticket #4). Debug builds and previews stay on the in-memory fakes.
-- Release builds still use `UnavailableBackupService` until #9 and #10: Import and Export are
-  disabled in the File menu, and the service fails if reached anyway, so no build reports a
-  backup that was never written.
+- Release builds use `EncryptedBackupService` (#9): Export writes the real encrypted backup,
+  Import stays disabled in the File menu until #10 (`isImportAvailable == false`) and the
+  service fails if reached anyway. `UnavailableBackupService` (both flags false) remains for
+  a build that must offer no backup at all.
 - If the library file cannot be opened at launch, the window shows "Couldn't Load Licenses"
   with a dedicated message (D8, D10), and creating, editing or deleting fails with the same
   message. The app never falls back to an in-memory store. Try Again cannot succeed in that

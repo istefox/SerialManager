@@ -4,7 +4,8 @@ import SwiftUI
 struct AppCommands: Commands {
     let store: LicenseStore
     let router: AppRouter
-    let backupAvailable: Bool
+    let exportAvailable: Bool
+    let importAvailable: Bool
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
@@ -14,10 +15,10 @@ struct AppCommands: Commands {
             Divider()
             Button("Import Licenses\u{2026}") { router.requestImport() }
                 .keyboardShortcut("i", modifiers: [.command, .shift])
-                .disabled(!backupAvailable)
+                .disabled(!importAvailable)
             Button("Export Licenses\u{2026}") { router.requestExport() }
                 .keyboardShortcut("e", modifiers: [.command, .shift])
-                .disabled(!backupAvailable || store.licenses.isEmpty)
+                .disabled(!exportAvailable || store.licenses.isEmpty)
         }
         CommandMenu("License") {
             let noSelection = store.selectedLicense == nil

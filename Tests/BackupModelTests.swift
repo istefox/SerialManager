@@ -6,25 +6,81 @@ import Testing
 struct ExportModelTests {
     private let url = URL(fileURLWithPath: "/tmp/test.smbackup")
 
-    @Test func passwordsMustBeNonEmptyAndEqual() {
+    @Test func passwordsMustBeLongEnoughAndEqual() {
         let model = ExportModel(service: InMemoryBackupService(repository: .sample()))
         #expect(!model.canExport)
-        model.password = "sample"
+        model.password = "sample-backup-pass"
         #expect(!model.canExport)
         #expect(!model.showsMismatch)
-        model.confirmation = "other"
+        model.confirmation = "other-backup-pass"
         #expect(model.showsMismatch)
         #expect(!model.canExport)
-        model.confirmation = "sample"
+        model.confirmation = "sample-backup-pass"
         #expect(model.canExport)
+    }
+
+    @Test(arguments: [
+        ("short-pass", false),
+        ("sample-backup-pass", true),
+        (String(repeating: " ", count: 12), true),
+        // 11 Characters, 12 Unicode scalars: the decomposed accent does not count as a character.
+        ("cafe\u{301}-sample", false),
+    ])
+    func minimumLengthCountsCharacters(password: String, enabled: Bool) {
+        let model = ExportModel(service: InMemoryBackupService(repository: .sample()))
+        model.password = password
+        model.confirmation = password
+        #expect(model.canExport == enabled)
+        #expect(!model.showsMismatch)
+    }
+
+    @Test func caseMismatchIsShownAndDisables() {
+        let model = ExportModel(service: InMemoryBackupService(repository: .sample()))
+        model.password = "sample-backup-pass"
+        model.confirmation = "sample-backup-paSS"
+        #expect(model.showsMismatch)
+        #expect(!model.canExport)
+    }
+
+    @Test func minimumLengthIsTwelve() {
+        #expect(ExportModel.minimumPasswordLength == 12)
     }
 
     @Test func exportShowsSummary() async {
         let model = ExportModel(service: InMemoryBackupService(repository: .sample()))
-        model.password = "sample"
-        model.confirmation = "sample"
+        model.password = "sample-backup-pass"
+        model.confirmation = "sample-backup-pass"
         await model.export(to: url)
         #expect(model.phase == .done(ExportSummary(licenseCount: SampleData.entries.count, missingSerialCount: 1), url))
+    }
+
+    @Test func keychainFailureShowsMessageAndRetryKeepsPassword() async throws {
+        let model = ExportModel(service: FailingExportService(error: SerialStoreError.accessDenied))
+        model.password = "sample-backup-pass"
+        model.confirmation = "sample-backup-pass"
+        await model.export(to: url)
+        let text = try #require(SerialStoreError.accessDenied.errorDescription)
+        #expect(model.phase == .failed(text))
+        model.retry()
+        #expect(model.phase == .entering)
+        #expect(model.password == "sample-backup-pass")
+        #expect(model.confirmation == "sample-backup-pass")
+        #expect(model.canExport)
+    }
+}
+
+/// Export always throws the given error; import is never used by these tests.
+private struct FailingExportService: BackupService {
+    let error: any Error & Sendable
+
+    func export(to url: URL, password: String) async throws -> ExportSummary { throw error }
+
+    func prepareImport(from url: URL, password: String) async throws -> ImportPreview {
+        throw UnavailableBackupService.NotAvailable()
+    }
+
+    func applyImport(_ preview: ImportPreview, policy: ConflictPolicy) async throws -> ImportSummary {
+        throw UnavailableBackupService.NotAvailable()
     }
 }
 
@@ -96,14 +152,18 @@ struct UnavailableBackupServiceTests {
     private let url = URL(fileURLWithPath: "/tmp/test.smbackup")
 
     @Test func reportsItselfUnavailable() {
-        #expect(!UnavailableBackupService().isAvailable)
-        #expect(InMemoryBackupService(repository: InMemoryLicenseRepository()).isAvailable)
+        let unavailable: any BackupService = UnavailableBackupService()
+        #expect(!unavailable.isExportAvailable)
+        #expect(!unavailable.isImportAvailable)
+        let fake: any BackupService = InMemoryBackupService(repository: InMemoryLicenseRepository())
+        #expect(fake.isExportAvailable)
+        #expect(fake.isImportAvailable)
     }
 
     @Test func exportFailsInsteadOfClaimingSuccess() async {
         let model = ExportModel(service: UnavailableBackupService())
-        model.password = "sample"
-        model.confirmation = "sample"
+        model.password = "sample-backup-pass"
+        model.confirmation = "sample-backup-pass"
         await model.export(to: url)
         guard case .failed = model.phase else {
             Issue.record("Expected a failure, got \(model.phase)")
