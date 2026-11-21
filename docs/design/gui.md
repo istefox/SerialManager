@@ -43,8 +43,9 @@ which matches HIG guidance for sheets on macOS.
 `NavigationSplitView` with two columns.
 
 - **Sidebar** (min 220 pt): `List` with selection, sorted by product name
-  (localized, case-insensitive). Row: product name (headline) and vendor (secondary,
-  one line, tail truncation allowed only for the vendor). `.searchable` in the sidebar,
+  (localized, case-insensitive). Row: product name (headline) and vendor (secondary);
+  both wrap with no line limit, so a long name is never truncated (SPEC 0005, D3).
+  `.searchable` in the sidebar,
   matching product name and vendor, case and diacritic insensitive.
 - **Detail**: the selected license, or a placeholder.
 
