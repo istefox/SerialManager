@@ -190,6 +190,8 @@ private actor GatedLicenseRepository: LicenseRepository {
         throw CancellationError()
     }
     func delete(id: UUID) async throws {}
+    func importLicense(_ license: LicenseSummary, serial: String?, policy: ConflictPolicy) async throws
+        -> LicenseImportOutcome { throw CancellationError() }
 
     func serial(for id: UUID) async throws -> String? {
         let call = callCount

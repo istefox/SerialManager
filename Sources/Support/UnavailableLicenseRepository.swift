@@ -24,4 +24,9 @@ struct UnavailableLicenseRepository: LicenseRepository {
     func serial(for id: UUID) async throws -> String? {
         throw LicenseRepositoryError.libraryUnavailable
     }
+
+    func importLicense(_ license: LicenseSummary, serial: String?, policy: ConflictPolicy) async throws
+        -> LicenseImportOutcome {
+        throw LicenseRepositoryError.libraryUnavailable
+    }
 }
