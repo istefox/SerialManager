@@ -102,6 +102,8 @@ final class ImportModel {
         // Closed while checking: write nothing and drop what this prepare may have kept. `close()`
         // already cancelled, but the service may have run that cancel before this prepare
         // (docs/plans/0010-encrypted-import-plan.md, 2.8); `cancelImport()` is idempotent.
+        // The phase is deliberately left at `.checking`: the sheet is already gone (SPEC 0010 A17),
+        // so nobody observes it and resetting it would only re-enable a dismissed UI.
         if isClosed {
             await service.cancelImport()
             return
