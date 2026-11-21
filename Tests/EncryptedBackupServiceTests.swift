@@ -302,9 +302,10 @@ struct EncryptedBackupServiceTests {
         try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: path)
         defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path) }
 
-        await #expect(throws: (any Error).self) {
+        let error = await #expect(throws: CocoaError.self) {
             try await F.service().export(to: url, password: F.password)
         }
+        #expect(error?.code == .fileWriteNoPermission)
         #expect(try Data(contentsOf: url) == original)
     }
 
@@ -314,24 +315,36 @@ struct EncryptedBackupServiceTests {
         let folder = dir.url.appending(path: "missing", directoryHint: .isDirectory)
         let url = folder.appending(path: "Licenses.smbackup", directoryHint: .notDirectory)
 
-        await #expect(throws: (any Error).self) {
+        let error = await #expect(throws: CocoaError.self) {
             try await F.service().export(to: url, password: F.password)
         }
+        #expect(error?.code == .fileNoSuchFile)
         #expect(!FileManager.default.fileExists(atPath: folder.path(percentEncoded: false)))
     }
 
     // MARK: - R11: off the main actor
 
+    /// Called from the main actor: the salt, the key derivation and the encryption must each still
+    /// run off the main thread. The probes wrap the real derivation and sealing, so a stage moved
+    /// onto the main actor shows up as `true` here.
     @MainActor
-    @Test func derivationInputsAreProducedOffTheMainThread() async throws {
+    @Test func cpuBoundStagesRunOffTheMainThread() async throws {
         let dir = try TemporaryDirectory()
         defer { dir.remove() }
         let url = dir.file()
-        let onMain = Recorder<Bool>()
-        let service = F.service(saltSource: { _ in onMain.append(Thread.isMainThread); return F.salt })
+        let saltOnMain = Recorder<Bool>()
+        let stages = Recorder<BackupStage>()
+        let stagesOnMain = Recorder<Bool>()
+        let service = F.service(
+            saltSource: { _ in saltOnMain.append(Thread.isMainThread); return F.salt },
+            stageProbe: { stage in stages.append(stage); stagesOnMain.append(Thread.isMainThread) }
+        )
 
         _ = try await service.export(to: url, password: F.password)
-        #expect(onMain.values == [false])
+        #expect(saltOnMain.values == [false])
+        #expect(stages.values == [.keyDerivation, .encryption])
+        #expect(stagesOnMain.values == [false, false])
+        #expect(try BackupFileReader.payload(try Data(contentsOf: url), password: F.password).licenses.count == 2)
     }
 
     // MARK: - Availability and import
