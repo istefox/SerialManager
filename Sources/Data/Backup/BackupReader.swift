@@ -65,6 +65,7 @@ enum BackupReader {
 
         // 5. Key and authenticated decryption, the header bytes as read being the associated data.
         //    Import accepts any non-empty password (ADR 0002, section 8).
+        //    Keep this check after the header checks and before key derivation (ADR 0002, section 8).
         guard !password.isEmpty else { throw BackupError.wrongPassword }
         let key: SymmetricKey
         do {
