@@ -128,3 +128,44 @@ extension Data {
         range(of: needle) != nil
     }
 }
+
+/// A `deriveKey` seam for the import tests (plan 0010, T3, A16 and R17): through
+/// `BackupFixtures.service(stageProbe:)`, it holds the first key derivation until `open()`.
+///
+/// The hold is a bounded synchronous wait inside the derivation, which runs in the reader's detached
+/// task. If it times out, `didTimeOut` is set, so a service that cannot run `cancelImport()` while a
+/// derivation is held fails the test instead of hanging it.
+final class DerivationGate: @unchecked Sendable {
+    private let release = DispatchSemaphore(value: 0)
+    private let lock = NSLock()
+    private var callCount = 0
+    private var timedOut = false
+
+    /// Call from the `.keyDerivation` stage probe. Holds the first call only.
+    func hold() {
+        let isFirst = lock.withLock {
+            callCount += 1
+            return callCount == 1
+        }
+        guard isFirst else { return }
+        if release.wait(timeout: .now() + 10) == .timedOut {
+            lock.withLock { timedOut = true }
+        }
+    }
+
+    func open() {
+        release.signal()
+    }
+
+    var calls: Int { lock.withLock { callCount } }
+    var didTimeOut: Bool { lock.withLock { timedOut } }
+
+    /// True once `count` derivations have started; false after 10 seconds.
+    func waitForCalls(_ count: Int) async -> Bool {
+        for _ in 0..<1_000 {
+            if calls >= count { return true }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        return calls >= count
+    }
+}
