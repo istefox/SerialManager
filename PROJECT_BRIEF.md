@@ -47,6 +47,7 @@ reinstalling software or moving to a new Mac quick and reliable.
 - 2026-11-18: repository bootstrapped, scaffolding level "standard", first commit pushed.
 - 2026-11-18: storage decided (ADR 0001).
 - 2026-11-19: backup format decided (ADR 0002).
+- 2026-11-21: encrypted export shipped (#9, PR #11): File > Export writes an ADR 0002 v1 backup in Release builds; Import stays disabled until #10.
 
 ## Open questions
 
