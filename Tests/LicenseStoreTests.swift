@@ -169,6 +169,7 @@ struct InMemoryBackupServiceTests {
     }
 
     @Test func unavailableServiceCancelReturns() async {
-        await UnavailableBackupService().cancelImport()
+        let service: any BackupService = UnavailableBackupService()
+        await service.cancelImport()
     }
 }
