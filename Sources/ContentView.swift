@@ -114,6 +114,9 @@ struct ContentView: View {
                 LicenseDetailView(license: license, store: store, router: router) {
                     formRequest = FormRequest(license: license, focusSerial: true)
                 }
+                // One detail view per entry: switching selection resets its state (reveal, lookup,
+                // "Copied"), so the previous entry's serial never renders for the new one.
+                .id(license.id)
                 .toolbar { detailToolbar(for: license) }
             } else {
                 ContentUnavailableView(
