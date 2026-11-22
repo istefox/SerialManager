@@ -73,10 +73,60 @@
     },
     "Already in SerialManager: %lld of %lld licenses.": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already in SerialManager: %1$lld of %#@licenses@."
+          },
+          "substitutions": {
+            "licenses": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg license"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg licenses"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Già presenti in SerialManager: %lld licenze su %lld."
+            "value": "Già presenti in SerialManager: %#@licenses@ su %2$lld."
+          },
+          "substitutions": {
+            "licenses": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg licenza"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg licenze"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
