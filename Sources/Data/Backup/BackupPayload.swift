@@ -10,6 +10,9 @@ struct BackupPayload: Codable, Equatable, Sendable {
         let id: UUID
         let productName: String
         let vendor: String
+        /// Name of the person the license is registered to. Optional key, added after version 1 was
+        /// first written: a backup without it decodes as `""` (ADR 0002, sections 6 and 7).
+        let registeredName: String
         let registeredEmail: String
         let purchaseDate: Date?
         /// Product version string of the license, not the file format version.
@@ -21,7 +24,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
         let serial: String?
 
         enum CodingKeys: String, CodingKey {
-            case id, productName, vendor, registeredEmail, purchaseDate, version, notes
+            case id, productName, vendor, registeredName, registeredEmail, purchaseDate, version, notes
             case createdAt, updatedAt, serial
         }
 
@@ -29,6 +32,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
             id: UUID,
             productName: String,
             vendor: String,
+            registeredName: String,
             registeredEmail: String,
             purchaseDate: Date?,
             version: String,
@@ -40,6 +44,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
             self.id = id
             self.productName = productName
             self.vendor = vendor
+            self.registeredName = registeredName
             self.registeredEmail = registeredEmail
             self.purchaseDate = purchaseDate
             self.version = version
@@ -55,6 +60,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
                 id: license.id,
                 productName: license.productName,
                 vendor: license.vendor,
+                registeredName: license.registeredName,
                 registeredEmail: license.registeredEmail,
                 purchaseDate: license.purchaseDate,
                 version: license.version,
@@ -68,7 +74,9 @@ struct BackupPayload: Codable, Equatable, Sendable {
         /// Every key of ADR 0002 section 6 must be present: `purchaseDate` and `serial` may be null
         /// but not missing (a synthesized decoder would accept a missing optional key, plan 0010 F6).
         /// Unknown keys are ignored. `serial` is kept as read: `""` stays `""` here and counts as no
-        /// serial when the import is applied.
+        /// serial when the import is applied. `registeredName` is the one optional-by-absence key: it was
+        /// added after version 1 shipped, so a file written without it decodes as `""` instead of failing
+        /// (ADR 0002, section 7).
         init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             for key in [CodingKeys.purchaseDate, .serial] where !container.contains(key) {
@@ -79,6 +87,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
                 id: try container.decode(UUID.self, forKey: .id),
                 productName: try container.decode(String.self, forKey: .productName),
                 vendor: try container.decode(String.self, forKey: .vendor),
+                registeredName: try container.decodeIfPresent(String.self, forKey: .registeredName) ?? "",
                 registeredEmail: try container.decode(String.self, forKey: .registeredEmail),
                 purchaseDate: try container.decodeIfPresent(Date.self, forKey: .purchaseDate),
                 version: try container.decode(String.self, forKey: .version),
@@ -94,6 +103,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
             try container.encode(id, forKey: .id)
             try container.encode(productName, forKey: .productName)
             try container.encode(vendor, forKey: .vendor)
+            try container.encode(registeredName, forKey: .registeredName)
             try container.encode(registeredEmail, forKey: .registeredEmail)
             if let purchaseDate {
                 try container.encode(purchaseDate, forKey: .purchaseDate)

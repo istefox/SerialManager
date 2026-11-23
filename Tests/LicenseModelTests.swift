@@ -11,11 +11,12 @@ struct LicenseModelTests {
     private let t = Date(timeIntervalSinceReferenceDate: 800_000_000)
     private var tPlus1: Date { t.addingTimeInterval(60) }
 
-    /// The nine stored fields, compared as a value.
+    /// The ten stored fields, compared as a value.
     private struct Snapshot: Equatable {
         let id: UUID
         let productName: String
         let vendor: String
+        let registeredName: String
         let registeredEmail: String
         let purchaseDate: Date?
         let version: String
@@ -27,6 +28,7 @@ struct LicenseModelTests {
             id = license.id
             productName = license.productName
             vendor = license.vendor
+            registeredName = license.registeredName
             registeredEmail = license.registeredEmail
             purchaseDate = license.purchaseDate
             version = license.version
@@ -85,6 +87,7 @@ struct LicenseModelTests {
         let license = try License(
             id: id,
             productName: "Example App",
+            registeredName: "Jane Appleseed",
             registeredEmail: "user@example.com",
             purchaseDate: created,
             createdAt: created,
@@ -97,6 +100,7 @@ struct LicenseModelTests {
         #expect(fetched.id == id)
         #expect(fetched.createdAt == created)
         #expect(fetched.updatedAt == t)
+        #expect(fetched.registeredName == "Jane Appleseed")
         #expect(fetched.registeredEmail == "user@example.com")
         #expect(fetched.purchaseDate == created)
     }
@@ -130,6 +134,7 @@ struct LicenseModelTests {
         try license.update(
             productName: license.productName,
             vendor: license.vendor,
+            registeredName: license.registeredName,
             registeredEmail: license.registeredEmail,
             purchaseDate: license.purchaseDate,
             version: "2.0",
@@ -155,6 +160,7 @@ struct LicenseModelTests {
             try license.update(
                 productName: "  ",
                 vendor: "Other Vendor",
+                registeredName: "Changed Name",
                 registeredEmail: "user@example.com",
                 purchaseDate: tPlus1,
                 version: "9.9",
@@ -174,6 +180,7 @@ struct LicenseModelTests {
         let license = try License(
             productName: "Example App",
             vendor: "Acme Corp",
+            registeredName: "Jane Appleseed",
             registeredEmail: "user@example.com",
             purchaseDate: t,
             version: "1.0",
@@ -186,6 +193,7 @@ struct LicenseModelTests {
         try license.update(
             productName: "Example App",
             vendor: "",
+            registeredName: "",
             registeredEmail: "",
             purchaseDate: nil,
             version: "",
@@ -196,6 +204,7 @@ struct LicenseModelTests {
 
         let fetched = try #require(try fetch(license.id, in: container).first)
         #expect(fetched.vendor == "")
+        #expect(fetched.registeredName == "")
         #expect(fetched.registeredEmail == "")
         #expect(fetched.purchaseDate == nil)
         #expect(fetched.version == "")
@@ -244,6 +253,7 @@ struct LicenseModelTests {
         try license.restore(
             productName: "Restored App",
             vendor: "Example Vendor",
+            registeredName: "Jane Appleseed",
             registeredEmail: "user@example.com",
             purchaseDate: tPlus1,
             version: "3.1",
@@ -257,6 +267,7 @@ struct LicenseModelTests {
         #expect(fetched.id == id)
         #expect(fetched.productName == "Restored App")
         #expect(fetched.vendor == "Example Vendor")
+        #expect(fetched.registeredName == "Jane Appleseed")
         #expect(fetched.registeredEmail == "user@example.com")
         #expect(fetched.purchaseDate == tPlus1)
         #expect(fetched.version == "3.1")
@@ -275,6 +286,7 @@ struct LicenseModelTests {
             try license.restore(
                 productName: name,
                 vendor: "Other Vendor",
+                registeredName: "Changed Name",
                 registeredEmail: "user@example.com",
                 purchaseDate: tPlus1,
                 version: "9.9",

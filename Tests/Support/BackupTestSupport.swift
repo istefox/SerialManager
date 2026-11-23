@@ -23,6 +23,9 @@ enum BackupFixtures {
         id: UUID(uuidString: "00000000-0000-4000-8000-000000000001")!,
         productName: "Sample Editor",
         vendor: "Example Software",
+        // Empty on purpose: `BackupImportFixture` is a sealed v1 file written before `registeredName`
+        // existed, so it decodes to "" and these fixtures must match it byte for byte.
+        registeredName: "",
         registeredEmail: "user@example.com",
         purchaseDate: nil,
         version: "1.0",
@@ -35,6 +38,7 @@ enum BackupFixtures {
         id: UUID(uuidString: "00000000-0000-4000-8000-000000000002")!,
         productName: "Sample Viewer",
         vendor: "Example Labs",
+        registeredName: "",
         registeredEmail: "viewer@example.com",
         purchaseDate: viewerPurchased,
         version: "2.5",

@@ -6,8 +6,9 @@
 ## What we are building
 
 A personal macOS app to record the serial numbers and license keys of the software the owner has bought.
-Each entry describes one product license (product name, vendor, serial or license key, registered email,
-purchase date, version and notes), and the app lets the user add, edit, search and copy these entries.
+Each entry describes one product license (product name, vendor, serial or license key, registered name,
+registered email, purchase date, version and notes), and the app lets the user add, edit, search and copy
+these entries.
 
 ## Why
 

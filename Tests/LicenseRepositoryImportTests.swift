@@ -21,6 +21,7 @@ struct LicenseRepositoryImportTests {
         let id: UUID
         let productName: String
         let vendor: String
+        let registeredName: String
         let registeredEmail: String
         let purchaseDate: Int64?
         let version: String
@@ -32,6 +33,7 @@ struct LicenseRepositoryImportTests {
             id = s.id
             productName = s.productName
             vendor = s.vendor
+            registeredName = s.registeredName
             registeredEmail = s.registeredEmail
             purchaseDate = s.purchaseDate.map(Snapshot.ms)
             version = s.version
@@ -44,6 +46,7 @@ struct LicenseRepositoryImportTests {
             id = l.id
             productName = l.productName
             vendor = l.vendor
+            registeredName = l.registeredName
             registeredEmail = l.registeredEmail
             purchaseDate = l.purchaseDate.map(Snapshot.ms)
             version = l.version
@@ -91,6 +94,7 @@ struct LicenseRepositoryImportTests {
             id: id,
             productName: name,
             vendor: "Example Vendor",
+            registeredName: "Jane Appleseed",
             registeredEmail: "user@example.com",
             purchaseDate: purchase ? Date(timeIntervalSinceReferenceDate: 600_000_000.125) : nil,
             version: "4.2",

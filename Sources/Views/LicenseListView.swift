@@ -89,7 +89,8 @@ private let longNameEntries: [(LicenseSummary, String?)] = {
     let date = Date(timeIntervalSince1970: 1_767_225_600) // 2026-01-01
     func entry(_ name: String, vendor: String) -> (LicenseSummary, String?) {
         let license = LicenseSummary(
-            id: UUID(), productName: name, vendor: vendor, registeredEmail: "user@example.com",
+            id: UUID(), productName: name, vendor: vendor, registeredName: "Jane Appleseed",
+            registeredEmail: "user@example.com",
             purchaseDate: date, version: "1.0", notes: "", createdAt: date, updatedAt: date
         )
         return (license, "FAKE-0000-TEST")

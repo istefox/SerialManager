@@ -92,6 +92,8 @@ struct LicenseFormView: View {
                         ProgressView().controlSize(.small)
                     }
                 }
+                TextField("Registered Name", text: $model.draft.registeredName)
+                    .textContentType(.name)
                 TextField("Registered Email", text: $model.draft.registeredEmail)
                     .textContentType(.emailAddress)
                 Toggle("Purchase Date", isOn: $model.hasPurchaseDate)

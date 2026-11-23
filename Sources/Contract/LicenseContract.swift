@@ -8,6 +8,8 @@ struct LicenseSummary: Identifiable, Hashable, Sendable {
     let id: UUID
     var productName: String
     var vendor: String
+    /// Name of the person the license is registered to. `""` means not set.
+    var registeredName: String
     var registeredEmail: String
     var purchaseDate: Date?
     var version: String
@@ -20,6 +22,8 @@ struct LicenseSummary: Identifiable, Hashable, Sendable {
 struct LicenseDraft: Equatable, Sendable {
     var productName = ""
     var vendor = ""
+    /// Name of the person the license is registered to. `""` means not set.
+    var registeredName = ""
     var registeredEmail = ""
     var purchaseDate: Date?
     var version = ""
@@ -36,6 +40,7 @@ struct LicenseDraft: Equatable, Sendable {
         var copy = self
         copy.productName = productName.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.vendor = vendor.trimmingCharacters(in: .whitespacesAndNewlines)
+        copy.registeredName = registeredName.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.registeredEmail = registeredEmail.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.version = version.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.serial = serial.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -49,6 +54,7 @@ extension LicenseDraft {
         self.init(
             productName: license.productName,
             vendor: license.vendor,
+            registeredName: license.registeredName,
             registeredEmail: license.registeredEmail,
             purchaseDate: license.purchaseDate,
             version: license.version,

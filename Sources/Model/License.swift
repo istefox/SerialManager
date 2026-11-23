@@ -23,6 +23,8 @@ final class License {
     private(set) var productName: String
     /// `""` means not set.
     private(set) var vendor: String
+    /// Name of the person the license is registered to ("nome e cognome"). `""` means not set.
+    private(set) var registeredName: String = ""
     /// `""` means not set.
     private(set) var registeredEmail: String
     private(set) var purchaseDate: Date?
@@ -43,6 +45,7 @@ final class License {
         id: UUID = UUID(),
         productName: String,
         vendor: String = "",
+        registeredName: String = "",
         registeredEmail: String = "",
         purchaseDate: Date? = nil,
         version: String = "",
@@ -54,6 +57,7 @@ final class License {
         self.id = id
         self.productName = productName
         self.vendor = vendor
+        self.registeredName = registeredName
         self.registeredEmail = registeredEmail
         self.purchaseDate = purchaseDate
         self.version = version
@@ -70,6 +74,7 @@ final class License {
     func update(
         productName: String,
         vendor: String,
+        registeredName: String,
         registeredEmail: String,
         purchaseDate: Date?,
         version: String,
@@ -79,6 +84,7 @@ final class License {
         try Self.validate(productName: productName)
         self.productName = productName
         self.vendor = vendor
+        self.registeredName = registeredName
         self.registeredEmail = registeredEmail
         self.purchaseDate = purchaseDate
         self.version = version
@@ -95,6 +101,7 @@ final class License {
     func restore(
         productName: String,
         vendor: String,
+        registeredName: String,
         registeredEmail: String,
         purchaseDate: Date?,
         version: String,
@@ -105,6 +112,7 @@ final class License {
         try Self.validate(productName: productName)
         self.productName = productName
         self.vendor = vendor
+        self.registeredName = registeredName
         self.registeredEmail = registeredEmail
         self.purchaseDate = purchaseDate
         self.version = version

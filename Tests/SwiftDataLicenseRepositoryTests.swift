@@ -24,6 +24,7 @@ struct SwiftDataLicenseRepositoryTests {
         let id: UUID
         let productName: String
         let vendor: String
+        let registeredName: String
         let registeredEmail: String
         let purchaseDate: Date?
         let version: String
@@ -35,6 +36,7 @@ struct SwiftDataLicenseRepositoryTests {
             id = license.id
             productName = license.productName
             vendor = license.vendor
+            registeredName = license.registeredName
             registeredEmail = license.registeredEmail
             purchaseDate = license.purchaseDate
             version = license.version
@@ -47,6 +49,7 @@ struct SwiftDataLicenseRepositoryTests {
             id = summary.id
             productName = summary.productName
             vendor = summary.vendor
+            registeredName = summary.registeredName
             registeredEmail = summary.registeredEmail
             purchaseDate = summary.purchaseDate
             version = summary.version
@@ -93,6 +96,7 @@ struct SwiftDataLicenseRepositoryTests {
         LicenseDraft(
             productName: "Renamed App",
             vendor: "Example Vendor",
+            registeredName: "Jane Appleseed",
             registeredEmail: "user@example.com",
             purchaseDate: Date(timeIntervalSinceReferenceDate: 700_000_000),
             version: "2.0",
@@ -225,6 +229,7 @@ struct SwiftDataLicenseRepositoryTests {
         #expect(summary.updatedAt == tPlus1)
         #expect(summary.productName == new.productName)
         #expect(summary.vendor == new.vendor)
+        #expect(summary.registeredName == new.registeredName)
         #expect(summary.registeredEmail == new.registeredEmail)
         #expect(summary.purchaseDate == new.purchaseDate)
         #expect(summary.version == new.version)

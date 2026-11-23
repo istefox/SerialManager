@@ -731,6 +731,16 @@
         }
       }
     },
+    "Registered Name": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome e cognome"
+          }
+        }
+      }
+    },
     "Replace": {
       "localizations": {
         "it": {
