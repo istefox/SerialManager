@@ -51,7 +51,13 @@ struct ExportModelTests {
         model.password = "sample-backup-pass"
         model.confirmation = "sample-backup-pass"
         await model.export(to: url)
-        #expect(model.phase == .done(ExportSummary(licenseCount: SampleData.entries.count, missingSerialCount: 1), url))
+        // The attachment count comes from the fixtures, not a literal, so adding another sample
+        // with attachments cannot make this expectation drift (SPEC 0018, R26).
+        #expect(model.phase == .done(
+            ExportSummary(
+                licenseCount: SampleData.entries.count, missingSerialCount: 1,
+                attachmentCount: SampleData.licenses.reduce(0) { $0 + $1.attachments.count }),
+            url))
     }
 
     @Test func keychainFailureShowsMessageAndRetryKeepsPassword() async throws {

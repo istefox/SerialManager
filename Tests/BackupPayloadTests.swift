@@ -21,6 +21,8 @@ struct BackupPayloadTests {
     @Test func entryKeysAreSortedAndNullsAreExplicit() throws {
         let payload = BackupPayload(exportedAt: F.exportedAt, licenses: [BackupPayload.Entry(F.editor, serial: nil)])
         let expected = #"{"exportedAt":"2026-01-01T10:00:00.750Z","licenses":[{"#
+            // Version 2: the array is always written, `[]` when the license has none (R23).
+            + #""attachments":[],"#
             + #""createdAt":"2026-01-01T09:00:00.250Z","#
             + #""id":"00000000-0000-4000-8000-000000000001","#
             + #""notes":"","#

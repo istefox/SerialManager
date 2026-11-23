@@ -2,11 +2,14 @@ import Foundation
 import Testing
 @testable import SerialManager
 
-/// Version 1 constants and header layout (ADR 0002, section 3), checked against literal bytes.
+/// Format constants and header layout (ADR 0002, section 3), checked against literal bytes.
+///
+/// The version literal moved from 1 to 2 with the attachments of SPEC 0018 (R22): the header is
+/// byte-for-byte the same shape, only the version field changed.
 struct BackupFormatTests {
     @Test func constantsMatchTheADR() {
         #expect(BackupFormat.magic == Data("SMBACKUP".utf8))
-        #expect(BackupFormat.version == 1)
+        #expect(BackupFormat.version == 2)
         #expect(BackupFormat.kdfID == 0x01)
         #expect(BackupFormat.iterations == 600_000)
         #expect(BackupFormat.saltLength == 16)
@@ -35,7 +38,7 @@ struct BackupFormatTests {
         let nonce = Data(repeating: 0xEE, count: 12)
         let header = BackupFormat.header(salt: salt, nonce: nonce, ciphertextLength: 0x0102_0304)
 
-        var expected: [UInt8] = [0x53, 0x4D, 0x42, 0x41, 0x43, 0x4B, 0x55, 0x50, 0x00, 0x01, 0x01, 0x00, 0x09, 0x27, 0xC0, 0x10]
+        var expected: [UInt8] = [0x53, 0x4D, 0x42, 0x41, 0x43, 0x4B, 0x55, 0x50, 0x00, 0x02, 0x01, 0x00, 0x09, 0x27, 0xC0, 0x10]
         expected += Array(0..<16)
         expected += [0x01]
         expected += Array(repeating: 0xEE, count: 12)

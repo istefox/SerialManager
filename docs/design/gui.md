@@ -42,14 +42,33 @@ which matches HIG guidance for sheets on macOS.
 
 `NavigationSplitView` with two columns.
 
-- **Sidebar** (min 220 pt): `List` with selection, sorted by product name
-  (localized, case-insensitive). Row: product name (headline) and vendor (secondary);
-  both wrap with no line limit, so a long name is never truncated (SPEC 0005, D3).
-  `.searchable` in the sidebar,
-  matching product name and vendor, case and diacritic insensitive.
+- **Sidebar** (min 220 pt): `List` with selection, in the order the sort picker holds. Row:
+  product name (headline) and vendor (secondary); both wrap with no line limit, so a long name is
+  never truncated (SPEC 0005, D3). `.searchable` in the sidebar, in the scope the search picker
+  holds, case and diacritic insensitive.
 - **Detail**: the selected license, or a placeholder.
 
-Toolbar: `+` New License (primary action). In the detail column: Edit, Delete.
+Toolbar: `+` New License (primary action), and a Sort and Search Options menu
+(`line.3.horizontal.decrease`). In the detail column: Edit, Delete.
+
+### Sorting and search (SPEC 0018)
+
+Both pickers live in that one toolbar menu, as `.inline` pickers, so the 220 pt sidebar keeps its
+width whatever the labels say.
+
+- **Sort By**, six orders: Name A to Z, Name Z to A, Date Added newest or oldest first, Date
+  Modified newest or oldest first. Name is `localizedStandardCompare`, so case and diacritics do
+  not change the order and `iPhoto 2` sorts before `iPhoto 10`. Every order ends in the license id,
+  so two licenses with the same name or the same date never swap places between two renders.
+  The choice is remembered across launches (`@AppStorage`, key `licenseSortOrder`); an unknown
+  stored value falls back to Name A to Z. Default: Name A to Z, the order before this ticket.
+- **Search In**, six choices: All Fields, Product Name, Vendor, Registered Name, Attachment Name,
+  Notes. All Fields matches seven fields, the five of the other scopes plus the registered email
+  and the version. The scope is not remembered: every launch starts on All Fields, so a search
+  never silently returns nothing because of a filter set days ago. The search field prompt names
+  the scope.
+- **The serial is never searched**, in any scope. Matching it would mean reading every Keychain
+  item on every keystroke, and would turn the list into an oracle for a serial the user cannot see.
 
 ### States
 
@@ -58,13 +77,15 @@ Toolbar: `+` New License (primary action). In the detail column: Edit, Delete.
 | Loading | `ProgressView` | Empty |
 | Empty (no licenses) | Empty list | `ContentUnavailableView` "No Licenses" + button "Add License" |
 | No selection | List | `ContentUnavailableView` "Select a License" |
-| Search, no results | `ContentUnavailableView.search(text:)` | Unchanged |
+| Search, no results, All Fields | `ContentUnavailableView.search(text:)` | Unchanged |
+| Search, no results, one field | `ContentUnavailableView` "No Results", "No license has <text> in <field>." + button "Search All Fields" | Unchanged |
 | Load error | Empty list | `ContentUnavailableView` with the error and "Try Again" |
 
 ## Detail
 
 Sections: **Product** (name, vendor, version), **License** (serial, registered name, registered
-email, purchase date), **Notes**, footer with created and modified dates in secondary text.
+email, purchase date), **Notes**, **Attachments** (hidden when there are none), footer with created
+and modified dates in secondary text.
 
 Serial row:
 - Masked by default as a fixed run of dots (fixed length, so the real length is not leaked).
@@ -86,6 +107,17 @@ Serial row:
 | Serial missing | Warning row: "The serial for this license is missing from the Keychain." + "Add Serial..." opening the edit form focused on the serial |
 | Serial loading | Small `ProgressView` in the serial row |
 | Notes empty, optional fields empty | Rows hidden |
+| Attachment readable | File name, size and date, **Open**, and a menu with **Save a Copy…** |
+| Attachment file missing | "File missing" in secondary text and **Remove**, with a confirmation that says there is nothing left to recover |
+| No attachments | The section is hidden |
+
+Attachments (SPEC 0018):
+- **Open** decrypts the file to a temporary folder and hands it to macOS. The copy is plaintext
+  while it is open; the folder is emptied at launch and at quit. If no application will open it,
+  an alert says so and points at Save a Copy.
+- **Save a Copy…** writes the decrypted file wherever the user chooses. That copy is theirs, and
+  the app never touches it again.
+- Nothing here is editable: files are added and removed in the form.
 
 ## License form
 
@@ -94,7 +126,20 @@ One view, two modes (New License, Edit License), presented as a sheet.
 Fields: Product name (required), Vendor, Version, Serial (multi-line, monospaced, for long
 keys), Registered name (the person the license is registered to, "nome e cognome"), Registered
 email, Purchase date (optional: a toggle "Purchase date" reveals a `DatePicker`), Notes
-(multi-line).
+(multi-line), and an **Attachments** section.
+
+Attachments in the form (SPEC 0018):
+- **Add File…** opens a file importer that accepts any file type and several files at once.
+- Nothing is written before Save. A picked file reads "Will be added when you save" and can be
+  dropped again; a stored one marked for removal reads "Will be removed when you save" and the
+  mark can be taken back. Either one counts as an unsaved change, so Cancel asks to discard.
+- A file that is refused (too large, over the license or library total, or a name the app cannot
+  use) is reported inline, in red, under the list. Several refusals in one pick are all shown, not
+  just the last.
+- The section shows the running total this license would hold after Save.
+- On Save the fields go first, then the removals, then the additions. If an attachment fails, the
+  license's own fields are already saved: the sheet stays open, names the file that failed and
+  says how many were not added, and saving again does not write anything twice.
 
 - **Save** is the default button (`Enter`), **Cancel** the cancel button (`Esc`).
 - Validation: Save with an empty product name shows an inline message under the field,
@@ -108,7 +153,9 @@ email, Purchase date (optional: a toggle "Purchase date" reveals a `DatePicker`)
 ### States
 
 New empty, New with validation error, Edit, Edit with unsaved changes (discard prompt),
-Add missing serial (focus on the serial), Saving (buttons disabled), Save error (alert).
+Add missing serial (focus on the serial), Saving (buttons disabled), Save error (alert),
+Attachment refused (inline red message), Attachment write failed after the fields were saved
+(alert, sheet stays open).
 Sheets have no title bar on macOS, so each sheet shows its title in a `SheetHeader`.
 
 ## Export
@@ -126,7 +173,8 @@ backup service reports `isExportAvailable == false`.
    number; the hint repeats it, so the two change together. A mismatch shows an inline message.
 2. System save panel, default name `SerialManager Backup YYYY-MM-DD.smbackup`.
 3. Summary: "Exported 12 licenses." and "Without a serial in the Keychain: 1", plus
-   "Show in Finder".
+   when they are above zero, "Attachments included: 7" and "Attachments whose stored file was
+   missing, not included: 1", plus "Show in Finder".
 
 States: Entering password, Password too short (Export disabled, hint visible), Mismatch,
 Exporting (progress), Done (summary), Failed.
@@ -134,7 +182,9 @@ Exporting (progress), Done (summary), Failed.
 Failed is a state of the sheet, not an alert: an icon, "Export Failed", the error message, and
 Cancel or Try Again. Try Again returns to the password form with both fields kept. Messages:
 
-- File too large: "The backup is larger than 64 MB, the maximum size."
+- File too large: "The backup is larger than 64 MB, the maximum size. Attachments are the usual
+  cause: remove a few of the largest ones and try again." The attachments are inside the backup,
+  base64 encoded, so they are what can push a file over the cap.
 - Encryption failure (system error, not user input): "The backup couldn't be encrypted. Try again."
 - A serial can't be read from the Keychain: the export stops, no file is written, and the
   sheet shows the existing Keychain message ("Keychain access was denied...").
@@ -167,6 +217,14 @@ empty library, the new-Mac case.
   only when the backup has one: a license the backup holds without a serial keeps its local
   serial. An import never deletes a serial from the Keychain.
 - A license the backup holds without a serial is created with no Keychain item.
+- Attachments come with the licenses: the bytes travel inside the backup and are re-encrypted
+  under this Mac's own key. **Replace** adds the attachments the backup carries that this Mac does
+  not already hold, and keeps every local one: it never deletes or rewrites an attachment. Importing does not move a
+  license's modified date, so an imported attachment keeps the date the backup gives it.
+- A backup made before #18 carries no attachments; the licenses import as before and local
+  attachments are kept.
+- An import does not apply the size limits of the form: a library that is over the total restores
+  in full (ADR 0004, decision 7).
 - If a write fails during the import, the import stops there and keeps what it already wrote.
   The sheet shows Import Failed with "The import stopped. Imported: N. Replaced: N." followed
   by the error's own message, and the list is reloaded so the licenses already imported appear.
@@ -232,6 +290,34 @@ struct LicenseSummary: Identifiable, Hashable, Sendable {
     var notes: String
     let createdAt: Date
     var updatedAt: Date
+    /// Ordered by `addedAt`, then by file name. Never carries bytes (SPEC 0018).
+    var attachments: [AttachmentSummary] = []
+}
+
+/// Metadata of one attached file. The bytes are fetched on demand, one call at a time.
+struct AttachmentSummary: Identifiable, Hashable, Sendable {
+    let id: UUID
+    var fileName: String
+    /// Size of the plaintext.
+    var byteCount: Int
+    var contentType: String?
+    var addedAt: Date
+}
+
+/// A file being attached: bytes included, identity not yet assigned.
+struct AttachmentFile: Equatable, Sendable {
+    var fileName: String
+    var contentType: String?
+    var data: Data
+}
+
+/// One attachment read from a backup: id, date and bytes all come from the file.
+struct AttachmentImport: Equatable, Sendable {
+    var id: UUID
+    var fileName: String
+    var contentType: String?
+    var addedAt: Date
+    var data: Data
 }
 
 /// What the license form edits; includes the serial.
@@ -295,13 +381,26 @@ protocol LicenseRepository: Sendable {
     func serial(for id: UUID) async throws -> String?
     /// Writes one license read from a backup, keeping its id, fields and both dates. Looks the
     /// id up first and never relies on the SwiftData upsert. Used by the import only.
-    func importLicense(_ license: LicenseSummary, serial: String?, policy: ConflictPolicy) async throws
-        -> LicenseImportOutcome
+    func importLicense(
+        _ license: LicenseSummary, serial: String?, attachments: [AttachmentImport],
+        policy: ConflictPolicy
+    ) async throws -> LicenseImportOutcome
+    /// Writes the bytes, then the row, and deletes the file again if the row fails.
+    /// Returns the license as it now stands, so a caller can keep its own copy fresh.
+    func addAttachment(_ file: AttachmentFile, to licenseID: UUID) async throws -> LicenseSummary
+    func removeAttachment(id: UUID) async throws -> LicenseSummary
+    /// A `stat`: no decryption and no Keychain call, so the detail view can ask per row.
+    func attachmentIsReadable(id: UUID) async -> Bool
+    /// The plaintext, decrypted on demand. Never cached.
+    func attachmentData(id: UUID) async throws -> Data
 }
 
 struct ExportSummary: Equatable, Sendable {
     let licenseCount: Int
     let missingSerialCount: Int
+    let attachmentCount: Int
+    /// Rows skipped because their stored file was gone (ADR 0004, decision 6).
+    let missingAttachmentCount: Int
 }
 
 /// A decrypted backup, ready to be applied.
@@ -405,6 +504,14 @@ the real implementations.
   message. The app never falls back to an in-memory store. Try Again cannot succeed in that
   state, because the repository is fixed at launch: the message says to quit and reopen. A
   working Try Again is a follow-up.
+- An attachment opened with **Open** is decrypted into a temporary folder and left there until
+  the app quits or is launched again. A vendor installer that moves or consumes the file it was
+  given can therefore consume that copy; the attachment in the library is untouched, and Save a
+  Copy… is the way to hand a file to something that will modify it.
+- A file in the Attachments folder with no row in the store is left alone, never swept: Debug and
+  Release share that folder, so a sweep by one build would delete the other build's files (ADR
+  0004, decision 4). The opposite case, a row whose file is gone, is shown as "File missing" with
+  a Remove button.
 - Only three failures have a dedicated message: Keychain access denied, the library file
   that cannot be opened, and an import stopped by a write error (its counts, then the
   underlying message). Every other error shows the generic system text.

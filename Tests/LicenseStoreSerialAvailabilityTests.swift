@@ -190,8 +190,16 @@ private actor GatedLicenseRepository: LicenseRepository {
         throw CancellationError()
     }
     func delete(id: UUID) async throws {}
-    func importLicense(_ license: LicenseSummary, serial: String?, policy: ConflictPolicy) async throws
-        -> LicenseImportOutcome { throw CancellationError() }
+    func importLicense(
+        _ license: LicenseSummary, serial: String?, attachments: [AttachmentImport],
+        policy: ConflictPolicy
+    ) async throws -> LicenseImportOutcome { throw CancellationError() }
+    func addAttachment(_ file: AttachmentFile, to licenseID: UUID) async throws -> LicenseSummary {
+        throw CancellationError()
+    }
+    func removeAttachment(id: UUID) async throws -> LicenseSummary { throw CancellationError() }
+    func attachmentIsReadable(id: UUID) async -> Bool { true }
+    func attachmentData(id: UUID) async throws -> Data { throw CancellationError() }
 
     func serial(for id: UUID) async throws -> String? {
         let call = callCount

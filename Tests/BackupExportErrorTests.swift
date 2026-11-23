@@ -9,7 +9,7 @@ import Testing
 struct BackupExportErrorTests {
     @Test func fileTooLargeUsesTheSpecText() throws {
         let text = try #require(BackupExportError.fileTooLarge.errorDescription)
-        #expect(text == String(localized: "The backup is larger than 64 MB, the maximum size."))
+        #expect(text == String(localized: "The backup is larger than 64 MB, the maximum size. Attachments are the usual cause: remove a few of the largest ones and try again."))
         #expect(BackupExportError.fileTooLarge.localizedDescription == text)
     }
 

@@ -20,7 +20,7 @@ struct EncryptedBackupServiceTests {
         let bytes = [UInt8](try Data(contentsOf: url))
         let fixed: [UInt8] = [
             0x53, 0x4D, 0x42, 0x41, 0x43, 0x4B, 0x55, 0x50, // SMBACKUP
-            0x00, 0x01,                                     // version 1
+            0x00, 0x02,                                     // version 2 (SPEC 0018, R22)
             0x01,                                           // PBKDF2-HMAC-SHA256
             0x00, 0x09, 0x27, 0xC0,                         // 600,000
             0x10,                                           // salt length 16
@@ -68,6 +68,8 @@ struct EncryptedBackupServiceTests {
         let keys: Set<String> = [
             "id", "productName", "vendor", "registeredName", "registeredEmail", "purchaseDate",
             "version", "notes", "createdAt", "updatedAt", "serial",
+            // Version 2: always present, `[]` for a license with no attachment (SPEC 0018, R23).
+            "attachments",
         ]
         let editor = licenses[0]
         #expect(Set(editor.keys) == keys)
@@ -82,6 +84,7 @@ struct EncryptedBackupServiceTests {
         #expect(editor["createdAt"] as? String == "2026-01-01T09:00:00.250Z")
         #expect(editor["updatedAt"] as? String == "2026-01-01T09:00:00.500Z")
         #expect(editor["serial"] as? String == "FAKE-0000-0000-0000")
+        #expect((editor["attachments"] as? [Any])?.isEmpty == true)
 
         let viewer = licenses[1]
         #expect(Set(viewer.keys) == keys)

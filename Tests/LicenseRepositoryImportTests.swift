@@ -77,6 +77,7 @@ struct LicenseRepositoryImportTests {
         return SwiftDataLicenseRepository(
             modelContainer: container,
             serials: serials,
+            attachments: .unusedForTests(),
             makeID: { fixedID ?? UUID() },
             now: { fixedDate },
             beforeSave: { if failingSave { throw PersistFailure() } }
@@ -125,7 +126,7 @@ struct LicenseRepositoryImportTests {
         let serials = ScriptedSerialStore()
         let repository = makeRepository(container, serials)
 
-        let outcome = try await repository.importLicense(record(u), serial: fileSerial, policy: .skip)
+        let outcome = try await repository.importLicense(record(u), serial: fileSerial, attachments: [], policy: .skip)
 
         #expect(outcome == .created)
         #expect(try stored(in: container) == [Snapshot(record(u))])
@@ -139,7 +140,7 @@ struct LicenseRepositoryImportTests {
         let serials = ScriptedSerialStore()
 
         let outcome = try await makeRepository(container, serials)
-            .importLicense(record(u, purchase: false), serial: serial, policy: .replace)
+            .importLicense(record(u, purchase: false), serial: serial, attachments: [], policy: .replace)
 
         #expect(outcome == .created)
         #expect(try stored(in: container) == [Snapshot(record(u, purchase: false))])
@@ -156,7 +157,7 @@ struct LicenseRepositoryImportTests {
         let before = try await seed(container, serials, serial: localSerial)
         let repository = makeRepository(container, serials)
 
-        let outcome = try await repository.importLicense(record(u), serial: serial, policy: .skip)
+        let outcome = try await repository.importLicense(record(u), serial: serial, attachments: [], policy: .skip)
 
         #expect(outcome == .skipped)
         #expect(try stored(in: container) == [before])
@@ -173,7 +174,7 @@ struct LicenseRepositoryImportTests {
         try await seed(container, serials, serial: localSerial)
 
         let outcome = try await makeRepository(container, serials)
-            .importLicense(record(u), serial: fileSerial, policy: .replace)
+            .importLicense(record(u), serial: fileSerial, attachments: [], policy: .replace)
 
         #expect(outcome == .replaced)
         #expect(try stored(in: container) == [Snapshot(record(u))])
@@ -188,7 +189,7 @@ struct LicenseRepositoryImportTests {
         try await seed(container, serials, serial: localSerial)
 
         let outcome = try await makeRepository(container, serials)
-            .importLicense(record(u), serial: serial, policy: .replace)
+            .importLicense(record(u), serial: serial, attachments: [], policy: .replace)
 
         #expect(outcome == .replaced)
         #expect(try stored(in: container) == [Snapshot(record(u))])
@@ -202,7 +203,7 @@ struct LicenseRepositoryImportTests {
         let serials = ScriptedSerialStore()
         try await seed(container, serials, serial: localSerial)
 
-        _ = try await makeRepository(container, serials).importLicense(record(u), serial: localSerial, policy: .replace)
+        _ = try await makeRepository(container, serials).importLicense(record(u), serial: localSerial, attachments: [], policy: .replace)
 
         #expect(await serials.calls(.save).isEmpty)
         #expect(await serials.calls(.delete).isEmpty)
@@ -217,12 +218,12 @@ struct LicenseRepositoryImportTests {
 
         for policy in [ConflictPolicy.replace, .skip] {
             await #expect(throws: LicenseValidationError.emptyProductName) {
-                try await repository.importLicense(record(u, name: "  "), serial: fileSerial, policy: policy)
+                try await repository.importLicense(record(u, name: "  "), serial: fileSerial, attachments: [], policy: policy)
             }
         }
         let other = UUID()
         await #expect(throws: LicenseValidationError.emptyProductName) {
-            try await repository.importLicense(record(other, name: "\n"), serial: fileSerial, policy: .skip)
+            try await repository.importLicense(record(other, name: "\n"), serial: fileSerial, attachments: [], policy: .skip)
         }
 
         #expect(try stored(in: container) == [before])
@@ -237,7 +238,7 @@ struct LicenseRepositoryImportTests {
         let failing = makeRepository(container, serials, failingSave: true)
 
         await #expect(throws: PersistFailure()) {
-            try await failing.importLicense(record(u), serial: fileSerial, policy: .skip)
+            try await failing.importLicense(record(u), serial: fileSerial, attachments: [], policy: .skip)
         }
 
         #expect(try stored(in: container).isEmpty)
@@ -254,7 +255,7 @@ struct LicenseRepositoryImportTests {
         let failing = makeRepository(container, serials, failingSave: true)
 
         await #expect(throws: PersistFailure()) {
-            try await failing.importLicense(record(u), serial: fileSerial, policy: .replace)
+            try await failing.importLicense(record(u), serial: fileSerial, attachments: [], policy: .replace)
         }
 
         #expect(try stored(in: container) == [before])
@@ -270,7 +271,7 @@ struct LicenseRepositoryImportTests {
         let failing = makeRepository(container, serials, failingSave: true)
 
         await #expect(throws: PersistFailure()) {
-            try await failing.importLicense(record(u), serial: fileSerial, policy: .skip)
+            try await failing.importLicense(record(u), serial: fileSerial, attachments: [], policy: .skip)
         }
 
         #expect(try stored(in: container).isEmpty)
@@ -285,7 +286,7 @@ struct LicenseRepositoryImportTests {
         let failing = makeRepository(container, serials, failingSave: true)
 
         await #expect(throws: PersistFailure()) {
-            try await failing.importLicense(record(u), serial: fileSerial, policy: .replace)
+            try await failing.importLicense(record(u), serial: fileSerial, attachments: [], policy: .replace)
         }
 
         #expect(try stored(in: container) == [before])
@@ -299,7 +300,7 @@ struct LicenseRepositoryImportTests {
         let orphan = "FAKE-0RPH-0000-0000"
         let serials = ScriptedSerialStore(items: [u: orphan])
 
-        let outcome = try await makeRepository(container, serials).importLicense(record(u), serial: nil, policy: .skip)
+        let outcome = try await makeRepository(container, serials).importLicense(record(u), serial: nil, attachments: [], policy: .skip)
 
         #expect(outcome == .created)
         #expect(await serials.items == [u: orphan])
@@ -317,7 +318,7 @@ struct LicenseRepositoryImportTests {
 
         // New license: the policy does not matter.
         await #expect(throws: SerialStoreError.accessDenied) {
-            try await repository.importLicense(record(u), serial: fileSerial, policy: policy)
+            try await repository.importLicense(record(u), serial: fileSerial, attachments: [], policy: policy)
         }
 
         #expect(try stored(in: container).isEmpty)
@@ -332,7 +333,7 @@ struct LicenseRepositoryImportTests {
         await serials.fail(.save, with: SerialStoreError.accessDenied)
 
         await #expect(throws: SerialStoreError.accessDenied) {
-            try await makeRepository(container, serials).importLicense(record(u), serial: fileSerial, policy: .replace)
+            try await makeRepository(container, serials).importLicense(record(u), serial: fileSerial, attachments: [], policy: .replace)
         }
 
         #expect(try stored(in: container) == [before])
@@ -347,7 +348,7 @@ struct LicenseRepositoryImportTests {
         await serials.fail(.read, with: SerialStoreError.undecodableData)
 
         let outcome = try await makeRepository(container, serials)
-            .importLicense(record(u), serial: fileSerial, policy: .replace)
+            .importLicense(record(u), serial: fileSerial, attachments: [], policy: .replace)
 
         #expect(outcome == .replaced)
         #expect(try stored(in: container) == [Snapshot(record(u))])
@@ -363,7 +364,7 @@ struct LicenseRepositoryImportTests {
 
         await #expect(throws: PersistFailure()) {
             try await makeRepository(container, serials, failingSave: true)
-                .importLicense(record(u), serial: fileSerial, policy: .replace)
+                .importLicense(record(u), serial: fileSerial, attachments: [], policy: .replace)
         }
 
         #expect(try stored(in: container) == [before])
@@ -380,7 +381,7 @@ struct LicenseRepositoryImportTests {
         await serials.fail(.read, with: error)
 
         await #expect(throws: error) {
-            try await makeRepository(container, serials).importLicense(record(u), serial: fileSerial, policy: .replace)
+            try await makeRepository(container, serials).importLicense(record(u), serial: fileSerial, attachments: [], policy: .replace)
         }
 
         #expect(try stored(in: container) == [before])
@@ -396,18 +397,18 @@ struct LicenseRepositoryImportTests {
         let repository = InMemoryLicenseRepository(entries: [(existing, localSerial)])
         let other = UUID()
 
-        #expect(try await repository.importLicense(record(u), serial: fileSerial, policy: .skip) == .skipped)
+        #expect(try await repository.importLicense(record(u), serial: fileSerial, attachments: [], policy: .skip) == .skipped)
         #expect(try await repository.fetchAll() == [existing])
         #expect(try await repository.serial(for: u) == localSerial)
 
-        #expect(try await repository.importLicense(record(u), serial: "", policy: .replace) == .replaced)
+        #expect(try await repository.importLicense(record(u), serial: "", attachments: [], policy: .replace) == .replaced)
         #expect(try await repository.fetchAll() == [record(u)])
         #expect(try await repository.serial(for: u) == localSerial)
 
-        #expect(try await repository.importLicense(record(u), serial: fileSerial, policy: .replace) == .replaced)
+        #expect(try await repository.importLicense(record(u), serial: fileSerial, attachments: [], policy: .replace) == .replaced)
         #expect(try await repository.serial(for: u) == fileSerial)
 
-        #expect(try await repository.importLicense(record(other), serial: nil, policy: .skip) == .created)
+        #expect(try await repository.importLicense(record(other), serial: nil, attachments: [], policy: .skip) == .created)
         #expect(try await repository.serial(for: other) == nil)
         #expect(try await repository.fetchAll().count == 2)
     }
@@ -415,7 +416,7 @@ struct LicenseRepositoryImportTests {
     @Test func inMemoryImportHonoursFailure() async {
         let repository = InMemoryLicenseRepository(failure: PersistFailure())
         await #expect(throws: PersistFailure()) {
-            try await repository.importLicense(record(u), serial: nil, policy: .skip)
+            try await repository.importLicense(record(u), serial: nil, attachments: [], policy: .skip)
         }
     }
 }

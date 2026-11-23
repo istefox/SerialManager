@@ -74,12 +74,38 @@ actor EncryptedBackupService: BackupService {
             ($0.createdAt, $0.id.uuidString) < ($1.createdAt, $1.id.uuidString)
         }
 
-        // 2. Serials; a failed read aborts the export.
+        // 2. Serials and attachment bytes.
+        //
+        // Attachments follow the asymmetry the serials already follow (SPEC 0010): an attachment
+        // whose file is GONE is skipped and counted, exactly as a missing Keychain item is exported
+        // as null and counted, while a failure to READ one aborts the export. R13 allows a row
+        // whose file was removed behind the app's back to exist, and that row must not be able to
+        // block every backup of every other license (decided by Stefano, 2026-11-23).
+        //
+        // Base64 encoding happens inside this actor, so it never runs on the main actor.
         var entries: [BackupPayload.Entry] = []
         entries.reserveCapacity(licenses.count)
+        var attachmentCount = 0
+        var missingAttachmentCount = 0
         for license in licenses {
             let serial = try await repository.serial(for: license.id)
-            entries.append(BackupPayload.Entry(license, serial: serial))
+            var attachments: [BackupPayload.Attachment] = []
+            attachments.reserveCapacity(license.attachments.count)
+            for attachment in license.attachments {
+                let data: Data
+                do {
+                    data = try await repository.attachmentData(id: attachment.id)
+                } catch AttachmentError.fileMissing {
+                    // Already lost before this export: nothing to write and nothing to save.
+                    missingAttachmentCount += 1
+                    continue
+                }
+                // Every other failure, a key that cannot be read or bytes that do not
+                // authenticate, aborts: those are symptoms to stop on, not missing data.
+                attachments.append(BackupPayload.Attachment(attachment, data: data))
+            }
+            attachmentCount += attachments.count
+            entries.append(BackupPayload.Entry(license, serial: serial, attachments: attachments))
         }
         let missingSerialCount = entries.filter { $0.serial == nil }.count
 
@@ -126,7 +152,11 @@ actor EncryptedBackupService: BackupService {
         // 8. Atomic write: the destination is replaced only once the new file is complete.
         try file.write(to: url, options: .atomic)
 
-        return ExportSummary(licenseCount: entries.count, missingSerialCount: missingSerialCount)
+        return ExportSummary(
+            licenseCount: entries.count,
+            missingSerialCount: missingSerialCount,
+            attachmentCount: attachmentCount,
+            missingAttachmentCount: missingAttachmentCount)
     }
 
     /// Reads, decrypts and validates `url` (ADR 0002, section 5) and keeps its payload for
@@ -173,7 +203,12 @@ actor EncryptedBackupService: BackupService {
         var skipped = 0
         for entry in pending.entries {
             do {
-                switch try await repository.importLicense(entry.summary, serial: entry.serial, policy: policy) {
+                let outcome = try await repository.importLicense(
+                    entry.summary,
+                    serial: entry.serial,
+                    attachments: entry.attachments.map(\.imported),
+                    policy: policy)
+                switch outcome {
                 case .created: imported += 1
                 case .replaced: replaced += 1
                 case .skipped: skipped += 1

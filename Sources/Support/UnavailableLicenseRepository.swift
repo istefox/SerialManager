@@ -25,8 +25,27 @@ struct UnavailableLicenseRepository: LicenseRepository {
         throw LicenseRepositoryError.libraryUnavailable
     }
 
-    func importLicense(_ license: LicenseSummary, serial: String?, policy: ConflictPolicy) async throws
-        -> LicenseImportOutcome {
+    func importLicense(
+        _ license: LicenseSummary,
+        serial: String?,
+        attachments: [AttachmentImport],
+        policy: ConflictPolicy
+    ) async throws -> LicenseImportOutcome {
+        throw LicenseRepositoryError.libraryUnavailable
+    }
+
+    func addAttachment(_ file: AttachmentFile, to licenseID: UUID) async throws -> LicenseSummary {
+        throw LicenseRepositoryError.libraryUnavailable
+    }
+
+    func removeAttachment(id: UUID) async throws -> LicenseSummary {
+        throw LicenseRepositoryError.libraryUnavailable
+    }
+
+    /// No library, so nothing is readable. The view shows the unavailable-library state anyway.
+    func attachmentIsReadable(id: UUID) async -> Bool { false }
+
+    func attachmentData(id: UUID) async throws -> Data {
         throw LicenseRepositoryError.libraryUnavailable
     }
 }

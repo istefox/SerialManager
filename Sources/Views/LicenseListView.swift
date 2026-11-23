@@ -1,9 +1,13 @@
 import SwiftUI
 
-/// Sidebar: licenses sorted by name, filtered by the search field.
+/// Sidebar: licenses in the chosen order, filtered by the search field and its scope.
 struct LicenseListView: View {
     @Bindable var store: LicenseStore
     var onDelete: ((LicenseSummary) -> Void)?
+
+    /// The chosen order, persisted across launches (R3). The store holds the same value so that
+    /// `visibleLicenses` and every save sort by one rule; this is the copy that survives a quit.
+    @AppStorage(LicenseSortOrder.storageKey) private var storedSortOrder = LicenseSortOrder.default.rawValue
 
     var body: some View {
         let visible = store.visibleLicenses
@@ -15,14 +19,71 @@ struct LicenseListView: View {
             if store.phase == .loading {
                 ProgressView()
             } else if visible.isEmpty, !store.licenses.isEmpty {
-                ContentUnavailableView.search(text: store.searchText)
+                emptySearchState
             }
         }
         .onDeleteCommand {
             if let license = store.selectedLicense { onDelete?(license) }
         }
-        .searchable(text: $store.searchText, placement: .sidebar, prompt: Text("Name or vendor"))
+        .searchable(
+            text: $store.searchText, placement: .sidebar, prompt: Text(store.searchScope.prompt))
+        .toolbar {
+            ToolbarItem {
+                sortMenu
+            }
+        }
         .navigationSplitViewColumnWidth(min: 220, ideal: 260)
+        // Both directions, so a value typed into defaults by hand, or written by another window,
+        // still reaches the store, and the picker writes through to defaults (R3).
+        .onAppear { store.sortOrder = LicenseSortOrder.stored(storedSortOrder) }
+        .onChange(of: storedSortOrder) { _, raw in
+            store.sortOrder = LicenseSortOrder.stored(raw)
+        }
+        .onChange(of: store.sortOrder) { _, order in
+            if storedSortOrder != order.rawValue { storedSortOrder = order.rawValue }
+        }
+    }
+
+    /// Order and scope in one menu, so the 220 pt sidebar keeps its width (R3, R5).
+    ///
+    /// Changing either leaves `searchText` and `selection` untouched: the list is reordered or
+    /// refiltered around the same selected license, which `List` keeps scrolled into view.
+    private var sortMenu: some View {
+        Menu {
+            Picker("Sort By", selection: $storedSortOrder) {
+                ForEach(LicenseSortOrder.allCases) { order in
+                    Text(order.label).tag(order.rawValue)
+                }
+            }
+            .pickerStyle(.inline)
+            Divider()
+            Picker("Search In", selection: $store.searchScope) {
+                ForEach(LicenseSearchScope.allCases) { scope in
+                    Text(scope.label).tag(scope)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Label("Sort and Search Options", systemImage: "line.3.horizontal.decrease")
+        }
+        .help(Text("Sorted by \(LicenseSortOrder.stored(storedSortOrder).label)"))
+    }
+
+    /// The no-results state. With a scope other than All Fields it says which field was searched
+    /// and offers the way back, so a filter set earlier is never mistaken for an empty library (R6).
+    @ViewBuilder
+    private var emptySearchState: some View {
+        if store.isSearchScoped {
+            ContentUnavailableView {
+                Label("No Results", systemImage: "magnifyingglass")
+            } description: {
+                Text("No license has \(store.searchText) in \(store.searchScope.label).")
+            } actions: {
+                Button("Search All Fields") { store.searchScope = .all }
+            }
+        } else {
+            ContentUnavailableView.search(text: store.searchText)
+        }
     }
 }
 
@@ -62,6 +123,24 @@ struct LicenseRow: View {
     } detail: {
         EmptyView()
     }
+}
+
+#Preview("List, no results in a scoped search") {
+    NavigationSplitView {
+        LicenseListView(store: .preview(searchText: "no such vendor", searchScope: .vendor))
+    } detail: {
+        EmptyView()
+    }
+    .frame(width: 720, height: 440)
+}
+
+#Preview("List, newest first") {
+    NavigationSplitView {
+        LicenseListView(store: .preview(sortOrder: .addedNewestFirst))
+    } detail: {
+        EmptyView()
+    }
+    .frame(width: 720, height: 440)
 }
 
 #Preview("List, long names") {

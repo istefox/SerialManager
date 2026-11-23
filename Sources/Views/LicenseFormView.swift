@@ -110,6 +110,7 @@ struct LicenseFormView: View {
                     .lineLimit(3...8)
                     .labelsHidden()
             }
+            AttachmentsFormSection(model: model, store: store)
             if model.isEditing {
                 Section {
                     Button("Delete License\u{2026}", role: .destructive) { confirmsDelete = true }
@@ -156,6 +157,11 @@ enum DeleteConfirmation {
 
 #Preview("Form, edit") {
     LicenseFormView(store: .preview(), model: LicenseFormModel(license: SampleData.first))
+}
+
+#Preview("Form, edit with attachments") {
+    LicenseFormView(
+        store: .preview(), model: LicenseFormModel(license: SampleData.withAttachments))
 }
 
 #Preview("Form, edit with changes") {

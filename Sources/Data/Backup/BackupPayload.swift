@@ -6,6 +6,86 @@ import Foundation
 /// a synthesized `Encodable` would drop the key, and import treats a missing required key as a
 /// corrupted file.
 struct BackupPayload: Codable, Equatable, Sendable {
+    /// One attachment inside a license entry, format version 2 (ADR 0002 section 6;
+    /// SPEC 0018, R23).
+    ///
+    /// `byteCount` is the plaintext size the library recorded and `data` the plaintext itself,
+    /// base64 encoded by `JSONEncoder`'s default `Data` strategy. The two must agree: a mismatch
+    /// makes the file corrupted, so a truncated or padded blob is never imported as if it were
+    /// whole.
+    struct Attachment: Codable, Equatable, Sendable {
+        let id: UUID
+        let fileName: String
+        /// UTType identifier when the library knew one. Written as `null`, never omitted.
+        let contentType: String?
+        let byteCount: Int
+        let addedAt: Date
+        let data: Data
+
+        enum CodingKeys: String, CodingKey {
+            case id, fileName, contentType, byteCount, addedAt, data
+        }
+
+        init(id: UUID, fileName: String, contentType: String?, byteCount: Int, addedAt: Date, data: Data) {
+            self.id = id
+            self.fileName = fileName
+            self.contentType = contentType
+            self.byteCount = byteCount
+            self.addedAt = addedAt
+            self.data = data
+        }
+
+        init(_ attachment: AttachmentSummary, data: Data) {
+            self.init(
+                id: attachment.id,
+                fileName: attachment.fileName,
+                contentType: attachment.contentType,
+                byteCount: attachment.byteCount,
+                addedAt: attachment.addedAt,
+                data: data
+            )
+        }
+
+        /// Every key must be present; `contentType` may be null but not missing, for the same
+        /// reason `purchaseDate` may not be on an entry.
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            guard container.contains(.contentType) else {
+                throw DecodingError.keyNotFound(
+                    CodingKeys.contentType,
+                    DecodingError.Context(codingPath: container.codingPath, debugDescription: "Required key"))
+            }
+            self.init(
+                id: try container.decode(UUID.self, forKey: .id),
+                fileName: try container.decode(String.self, forKey: .fileName),
+                contentType: try container.decodeIfPresent(String.self, forKey: .contentType),
+                byteCount: try container.decode(Int.self, forKey: .byteCount),
+                addedAt: try container.decode(Date.self, forKey: .addedAt),
+                data: try container.decode(Data.self, forKey: .data)
+            )
+        }
+
+        func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(fileName, forKey: .fileName)
+            if let contentType {
+                try container.encode(contentType, forKey: .contentType)
+            } else {
+                try container.encodeNil(forKey: .contentType)
+            }
+            try container.encode(byteCount, forKey: .byteCount)
+            try container.encode(addedAt, forKey: .addedAt)
+            try container.encode(data, forKey: .data)
+        }
+
+        /// The attachment as the repository takes it on import, bytes included.
+        var imported: AttachmentImport {
+            AttachmentImport(
+                id: id, fileName: fileName, contentType: contentType, addedAt: addedAt, data: data)
+        }
+    }
+
     struct Entry: Codable, Equatable, Sendable {
         let id: UUID
         let productName: String
@@ -22,10 +102,13 @@ struct BackupPayload: Codable, Equatable, Sendable {
         let updatedAt: Date
         /// Nil when the Keychain item is missing or empty; never `""`.
         let serial: String?
+        /// The license's attachments, version 2 onward (SPEC 0018, R23). Always written, `[]` when
+        /// there is none. A version 1 file, or a version 2 entry without the key, decodes as `[]`.
+        let attachments: [Attachment]
 
         enum CodingKeys: String, CodingKey {
             case id, productName, vendor, registeredName, registeredEmail, purchaseDate, version, notes
-            case createdAt, updatedAt, serial
+            case createdAt, updatedAt, serial, attachments
         }
 
         init(
@@ -39,7 +122,8 @@ struct BackupPayload: Codable, Equatable, Sendable {
             notes: String,
             createdAt: Date,
             updatedAt: Date,
-            serial: String?
+            serial: String?,
+            attachments: [Attachment] = []
         ) {
             self.id = id
             self.productName = productName
@@ -52,10 +136,11 @@ struct BackupPayload: Codable, Equatable, Sendable {
             self.createdAt = createdAt
             self.updatedAt = updatedAt
             self.serial = serial
+            self.attachments = attachments
         }
 
         /// Entry for `license`. An empty serial is stored as nil, as the ADR requires.
-        init(_ license: LicenseSummary, serial: String?) {
+        init(_ license: LicenseSummary, serial: String?, attachments: [Attachment] = []) {
             self.init(
                 id: license.id,
                 productName: license.productName,
@@ -67,7 +152,8 @@ struct BackupPayload: Codable, Equatable, Sendable {
                 notes: license.notes,
                 createdAt: license.createdAt,
                 updatedAt: license.updatedAt,
-                serial: (serial?.isEmpty ?? true) ? nil : serial
+                serial: (serial?.isEmpty ?? true) ? nil : serial,
+                attachments: attachments
             )
         }
 
@@ -94,7 +180,10 @@ struct BackupPayload: Codable, Equatable, Sendable {
                 notes: try container.decode(String.self, forKey: .notes),
                 createdAt: try container.decode(Date.self, forKey: .createdAt),
                 updatedAt: try container.decode(Date.self, forKey: .updatedAt),
-                serial: try container.decodeIfPresent(String.self, forKey: .serial)
+                serial: try container.decodeIfPresent(String.self, forKey: .serial),
+                // Optional by absence, like `registeredName`: a version 1 file has no such key
+                // (SPEC 0018, R23).
+                attachments: try container.decodeIfPresent([Attachment].self, forKey: .attachments) ?? []
             )
         }
 
@@ -119,6 +208,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
             } else {
                 try container.encodeNil(forKey: .serial)
             }
+            try container.encode(attachments, forKey: .attachments)
         }
     }
 
@@ -200,6 +290,11 @@ struct BackupPayload: Codable, Equatable, Sendable {
     /// UUID or date, two licenses with the same `id`, or a blank product name (SPEC 0010, D2) give
     /// `BackupError.corruptedFile`. The product name uses the model's own rule, so a payload that
     /// passes here cannot be refused by `License` when it is applied.
+    ///
+    /// The same holds for an attachment (SPEC 0018, R23): base64 that does not decode is already a
+    /// decoding failure, and a decoded length that disagrees with `byteCount`, a blank file name, a
+    /// negative `byteCount`, or the same attachment id twice in the file are all corrupted. Ids are
+    /// unique across the whole file, not per license: one id is one file on disk.
     static func decodeForImport(_ plaintext: Data) throws(BackupError) -> BackupPayload {
         guard String(data: plaintext, encoding: .utf8) != nil else { throw .corruptedFile }
         let payload: BackupPayload
@@ -209,9 +304,19 @@ struct BackupPayload: Codable, Equatable, Sendable {
             throw .corruptedFile
         }
         var ids = Set<UUID>()
+        var attachmentIDs = Set<UUID>()
         for entry in payload.licenses {
             guard ids.insert(entry.id).inserted, License.isValidProductName(entry.productName) else {
                 throw .corruptedFile
+            }
+            for attachment in entry.attachments {
+                guard attachmentIDs.insert(attachment.id).inserted,
+                      AttachmentRecord.isValidFileName(attachment.fileName),
+                      attachment.byteCount >= 0,
+                      attachment.data.count == attachment.byteCount
+                else {
+                    throw .corruptedFile
+                }
             }
         }
         return payload

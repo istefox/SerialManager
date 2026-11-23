@@ -16,7 +16,7 @@ extension BackupExportError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .fileTooLarge:
-            String(localized: "The backup is larger than 64 MB, the maximum size.")
+            String(localized: "The backup is larger than 64 MB, the maximum size. Attachments are the usual cause: remove a few of the largest ones and try again.")
         case .encryptionFailed:
             String(localized: "The backup couldn't be encrypted. Try again.")
         }
