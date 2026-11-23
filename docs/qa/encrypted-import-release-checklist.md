@@ -35,8 +35,10 @@ A14 needs an empty library (the new-Mac case). Your own account holds your real 
 
 ## R17, R7, R8, R9. Conflicts: Cancel, Skip, Replace
 
+The same flow on fake data was checked by QA in the Debug app (QA verdict on 8f7af8e, re-run on ef7db14). The steps below cover the Release build.
+
 - [ ] Edit Acme Editor: Vendor `Acme Changed`, Serial `ACME-0000-TEST-1111`, Save. Edit Acme Viewer: Serial `ACME-0000-TEST-2222`, Save.
-- [ ] Cmd+Shift+I, `E1.smbackup`, `sample-backup-pass`, Import: "Already in SerialManager: 2 of 2 licenses." [Già presenti in SerialManager: 2 licenze su 2.], Skip [Salta] selected. Cancel.
+- [ ] Cmd+Shift+I, `E1.smbackup`, `sample-backup-pass`, Import: "Already in SerialManager: 2 of 2 licenses." [Già in SerialManager: 2 licenze su 2.], Skip [Salta] selected. Cancel.
 - [ ] Acme Editor still shows `Acme Changed` and reveals `ACME-0000-TEST-1111` (Cancel wrote nothing). Import the same file again: the same 2 conflicts appear.
 - [ ] Skip, Import: "Import Complete", Imported 0, Replaced 0, Skipped 2. Acme Editor: `Acme Changed`, `ACME-0000-TEST-1111`, "Created" equals D1. Acme Viewer reveals `ACME-0000-TEST-2222`.
 - [ ] Import again, choose Replace [Sostituisci] ("Your current licenses are overwritten with the ones in the backup." [Le licenze attuali vengono sovrascritte con quelle del backup.]), Import: Imported 0, Replaced 2, Skipped 0. The sidebar still has exactly two licenses.
@@ -45,7 +47,7 @@ A14 needs an empty library (the new-Mac case). Your own account holds your real 
 
 ## Not checked by hand
 
-- Keychain failure during the apply (R10, A11): serials live in the data protection keychain, so macOS shows no prompt to deny (same as #9). Covered by `Tests/EncryptedBackupImportTests.swift` (stop after 2 of 5, message with counts, list reloaded) and `ImportModelTests`, and checked by QA in the Debug app (QA verdict on 8f7af8e).
+- Keychain failure during the apply (R10, A11): serials live in the data protection keychain, so macOS shows no prompt to deny (same as #9). Covered by `Tests/EncryptedBackupImportTests.swift` (stop after 2 of 5, message with counts, list reloaded) and `ImportModelTests`.
 - The other corruptions, the 64 MiB cap, the 600,000 to 10,000,000 iteration bounds, NFC passwords, payload validation (A4 to A7): covered by `Tests/BackupReaderTests.swift` and `Tests/BackupPayloadTests.swift`.
 - Closing the sheet while the password is being checked (A16, A17): the check takes a fraction of a second, too short to hit by hand. Covered by the `cancelImport()` tests.
 - Your own account: only optional, File > Import Licenses… is enabled there too. Do not import anything into it.
