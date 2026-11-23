@@ -104,7 +104,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Già presenti in SerialManager: %#@licenses@ su %2$lld."
+            "value": "Già in SerialManager: %#@licenses@ su %2$lld."
           },
           "substitutions": {
             "licenses": {
