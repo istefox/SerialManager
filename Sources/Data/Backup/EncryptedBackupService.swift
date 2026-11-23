@@ -201,6 +201,7 @@ private extension BackupPayload.Entry {
             id: id,
             productName: productName,
             vendor: vendor,
+            registeredName: registeredName,
             registeredEmail: registeredEmail,
             purchaseDate: purchaseDate,
             version: version,

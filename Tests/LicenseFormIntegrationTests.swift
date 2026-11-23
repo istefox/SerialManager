@@ -118,7 +118,8 @@ struct LicenseFormIntegrationTests {
         let serials = InMemorySerialStore()
         let store = await makeStore(container: container, serials: serials, clock: TestClock(start))
         let model = LicenseFormModel()
-        model.draft = LicenseDraft(productName: " Acme Editor ", vendor: "Acme", serial: serial)
+        model.draft = LicenseDraft(
+            productName: " Acme Editor ", vendor: "Acme", registeredName: "  Jane Appleseed  ", serial: serial)
 
         #expect(await model.save(to: store))
 
@@ -127,7 +128,39 @@ struct LicenseFormIntegrationTests {
         #expect(state.licenses.count == 1)
         #expect(stored.productName == "Acme Editor")
         #expect(stored.vendor == "Acme")
+        #expect(stored.registeredName == "Jane Appleseed")
         #expect(state.serials[stored.id] == .some(serial))
+    }
+
+    /// The registered name is optional: a license saved without it stores `""`, and an edit can
+    /// set it and clear it again (ticket #17).
+    @Test func registeredNameIsOptionalAndCanBeSetThenCleared() async throws {
+        let container = try makeContainer()
+        let serials = InMemorySerialStore()
+        let clock = TestClock(start)
+        let store = await makeStore(container: container, serials: serials, clock: clock)
+        let new = LicenseFormModel()
+        new.draft = LicenseDraft(productName: "Acme Editor", serial: serial)
+
+        #expect(await new.save(to: store))
+        var stored = try #require(try await storedState(container: container, serials: serials).licenses.first)
+        #expect(stored.registeredName == "")
+
+        clock.advance(by: 60)
+        let setting = LicenseFormModel(
+            license: stored, draft: LicenseDraft(stored, serial: serial))
+        setting.draft.registeredName = "Jane Appleseed"
+        #expect(await setting.save(to: store))
+        stored = try #require(try await storedState(container: container, serials: serials).licenses.first)
+        #expect(stored.registeredName == "Jane Appleseed")
+
+        clock.advance(by: 60)
+        let clearing = LicenseFormModel(
+            license: stored, draft: LicenseDraft(stored, serial: serial))
+        clearing.draft.registeredName = "   "
+        #expect(await clearing.save(to: store))
+        stored = try #require(try await storedState(container: container, serials: serials).licenses.first)
+        #expect(stored.registeredName == "")
     }
 
     // MARK: R4

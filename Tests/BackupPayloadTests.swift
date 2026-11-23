@@ -27,6 +27,7 @@ struct BackupPayloadTests {
             + #""productName":"Sample Editor","#
             + #""purchaseDate":null,"#
             + #""registeredEmail":"user@example.com","#
+            + #""registeredName":"","#
             + #""serial":null,"#
             + #""updatedAt":"2026-01-01T09:00:00.500Z","#
             + #""vendor":"Example Software","#
@@ -70,6 +71,20 @@ struct BackupPayloadImportTests {
         var entry = J.entry()
         change(&entry)
         return entry
+    }
+
+    /// `registeredName` was added after version 1 shipped, so a file written without it must still
+    /// import, with the name empty (ADR 0002 sections 6 and 7; ticket #17).
+    @Test func payloadWithoutRegisteredNameDecodesWithAnEmptyName() throws {
+        let data = try J.payload(entries: [entry { $0.removeValue(forKey: "registeredName") }])
+        let payload = try decode(data).get()
+        #expect(payload.licenses.map(\.registeredName) == [""])
+    }
+
+    @Test func registeredNameDecodesWhenPresent() throws {
+        let data = try J.payload(entries: [entry { $0["registeredName"] = "Jane Appleseed" }])
+        let payload = try decode(data).get()
+        #expect(payload.licenses.map(\.registeredName) == ["Jane Appleseed"])
     }
 
     @Test func validPayloadDecodes() throws {

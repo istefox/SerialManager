@@ -42,6 +42,7 @@ actor InMemoryLicenseRepository: LicenseRepository {
             id: UUID(),
             productName: draft.productName,
             vendor: draft.vendor,
+            registeredName: draft.registeredName,
             registeredEmail: draft.registeredEmail,
             purchaseDate: draft.purchaseDate,
             version: draft.version,
@@ -59,6 +60,7 @@ actor InMemoryLicenseRepository: LicenseRepository {
         guard var license = licenses[id] else { throw NotFound() }
         license.productName = draft.productName
         license.vendor = draft.vendor
+        license.registeredName = draft.registeredName
         license.registeredEmail = draft.registeredEmail
         license.purchaseDate = draft.purchaseDate
         license.version = draft.version

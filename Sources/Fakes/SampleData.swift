@@ -33,6 +33,7 @@ enum SampleData {
             id: UUID(),
             productName: name,
             vendor: vendor,
+            registeredName: "Jane Appleseed",
             registeredEmail: "user@example.com",
             purchaseDate: reference,
             version: version,

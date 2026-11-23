@@ -46,9 +46,10 @@ with the Italian label in brackets.
 1. Choose File > New License (Nuova licenza), press `Cmd+N`, or click the "+" button in the
    toolbar. With an empty list you can also click Add License (Aggiungi licenza).
 2. Fill in the form. Product Name (Nome prodotto) is the only required field; Vendor
-   (Produttore), Version (Versione), Serial (Seriale), Registered Email (Email di registrazione)
-   and Notes (Note) are optional. Example: Product Name `Acme Editor`, Vendor `Acme`, Serial
-   `ACME-0000-TEST-0000`, Registered Email `user@example.com`.
+   (Produttore), Version (Versione), Serial (Seriale), Registered Name (Nome e cognome),
+   Registered Email (Email di registrazione) and Notes (Note) are optional. Example: Product
+   Name `Acme Editor`, Vendor `Acme`, Serial `ACME-0000-TEST-0000`, Registered Name
+   `Jane Appleseed`, Registered Email `user@example.com`.
 3. Click Save (Salva). The license appears in the sidebar list and its serial goes to the
    Keychain.
 

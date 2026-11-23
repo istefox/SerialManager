@@ -63,8 +63,8 @@ Toolbar: `+` New License (primary action). In the detail column: Edit, Delete.
 
 ## Detail
 
-Sections: **Product** (name, vendor, version), **License** (serial, registered email,
-purchase date), **Notes**, footer with created and modified dates in secondary text.
+Sections: **Product** (name, vendor, version), **License** (serial, registered name, registered
+email, purchase date), **Notes**, footer with created and modified dates in secondary text.
 
 Serial row:
 - Masked by default as a fixed run of dots (fixed length, so the real length is not leaked).
@@ -92,8 +92,9 @@ Serial row:
 One view, two modes (New License, Edit License), presented as a sheet.
 
 Fields: Product name (required), Vendor, Version, Serial (multi-line, monospaced, for long
-keys), Registered email, Purchase date (optional: a toggle "Purchase date" reveals a
-`DatePicker`), Notes (multi-line).
+keys), Registered name (the person the license is registered to, "nome e cognome"), Registered
+email, Purchase date (optional: a toggle "Purchase date" reveals a `DatePicker`), Notes
+(multi-line).
 
 - **Save** is the default button (`Enter`), **Cancel** the cancel button (`Esc`).
 - Validation: Save with an empty product name shows an inline message under the field,
@@ -224,6 +225,7 @@ struct LicenseSummary: Identifiable, Hashable, Sendable {
     let id: UUID
     var productName: String
     var vendor: String
+    var registeredName: String
     var registeredEmail: String
     var purchaseDate: Date?
     var version: String
@@ -236,6 +238,7 @@ struct LicenseSummary: Identifiable, Hashable, Sendable {
 struct LicenseDraft: Equatable, Sendable {
     var productName = ""
     var vendor = ""
+    var registeredName = ""
     var registeredEmail = ""
     var purchaseDate: Date?
     var version = ""
@@ -252,6 +255,7 @@ struct LicenseDraft: Equatable, Sendable {
         var copy = self
         copy.productName = productName.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.vendor = vendor.trimmingCharacters(in: .whitespacesAndNewlines)
+        copy.registeredName = registeredName.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.registeredEmail = registeredEmail.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.version = version.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.serial = serial.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -265,6 +269,7 @@ extension LicenseDraft {
         self.init(
             productName: license.productName,
             vendor: license.vendor,
+            registeredName: license.registeredName,
             registeredEmail: license.registeredEmail,
             purchaseDate: license.purchaseDate,
             version: license.version,

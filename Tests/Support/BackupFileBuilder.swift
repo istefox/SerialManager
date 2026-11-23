@@ -65,6 +65,7 @@ enum BackupPayloadJSON {
             "id": id,
             "productName": name,
             "vendor": "Example Software",
+            "registeredName": "",
             "registeredEmail": "user@example.com",
             "purchaseDate": NSNull(),
             "version": "1.0",

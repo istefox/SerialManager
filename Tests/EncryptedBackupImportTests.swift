@@ -38,7 +38,8 @@ struct EncryptedBackupImportTests {
 
     private static func ms(_ s: LicenseSummary) -> LicenseSummary {
         LicenseSummary(
-            id: s.id, productName: s.productName, vendor: s.vendor, registeredEmail: s.registeredEmail,
+            id: s.id, productName: s.productName, vendor: s.vendor, registeredName: s.registeredName,
+            registeredEmail: s.registeredEmail,
             purchaseDate: s.purchaseDate.map(ms), version: s.version, notes: s.notes,
             createdAt: ms(s.createdAt), updatedAt: ms(s.updatedAt))
     }
@@ -94,7 +95,8 @@ struct EncryptedBackupImportTests {
     private var localX: LicenseSummary {
         LicenseSummary(
             id: editorID, productName: "Local Editor", vendor: "Local Vendor",
-            registeredEmail: "local@example.com", purchaseDate: nil, version: "0.9", notes: "Local notes",
+            registeredName: "Local Owner", registeredEmail: "local@example.com",
+            purchaseDate: nil, version: "0.9", notes: "Local notes",
             createdAt: Date(timeIntervalSince1970: 1_767_258_000),
             updatedAt: Date(timeIntervalSince1970: 1_767_258_000))
     }
@@ -132,7 +134,7 @@ struct EncryptedBackupImportTests {
             now: { Date(timeIntervalSince1970: 1_767_258_000.250) })
         _ = try await source.create(LicenseDraft(productName: "Sample One", vendor: "Example", serial: "FAKE-0001"))
         _ = try await source.create(LicenseDraft(
-            productName: "Sample Two", registeredEmail: "two@example.com",
+            productName: "Sample Two", registeredName: "Jane Appleseed", registeredEmail: "two@example.com",
             purchaseDate: Date(timeIntervalSince1970: 1_767_225_600), version: "2", notes: "Fake", serial: ""))
         _ = try await source.create(LicenseDraft(productName: "Sample Three", serial: "FAKE-0003"))
         let url = directory.file()
@@ -373,7 +375,8 @@ struct EncryptedBackupImportTests {
         let repository = try makeLibrary(serials)
         let ids = (1...3).map(numberedID)
         try await seed(repository, serials, LicenseSummary(
-            id: ids[0], productName: "Local App", vendor: "", registeredEmail: "", purchaseDate: nil,
+            id: ids[0], productName: "Local App", vendor: "", registeredName: "", registeredEmail: "",
+            purchaseDate: nil,
             version: "", notes: "", createdAt: Date(timeIntervalSince1970: 1_767_258_000),
             updatedAt: Date(timeIntervalSince1970: 1_767_258_000)), serial: nil)
         let service = F.service(repository: repository)

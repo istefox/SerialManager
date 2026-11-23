@@ -30,6 +30,7 @@ struct LicenseDetailView: View {
                     onCopy: copySerial,
                     onAddSerial: onAddSerial
                 )
+                optionalRow("Registered Name", license.registeredName)
                 optionalRow("Registered Email", license.registeredEmail)
                 if let date = license.purchaseDate {
                     LabeledContent("Purchase Date") {

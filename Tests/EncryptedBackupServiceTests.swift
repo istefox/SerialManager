@@ -66,14 +66,15 @@ struct EncryptedBackupServiceTests {
         try #require(licenses.count == 2)
 
         let keys: Set<String> = [
-            "id", "productName", "vendor", "registeredEmail", "purchaseDate", "version", "notes",
-            "createdAt", "updatedAt", "serial",
+            "id", "productName", "vendor", "registeredName", "registeredEmail", "purchaseDate",
+            "version", "notes", "createdAt", "updatedAt", "serial",
         ]
         let editor = licenses[0]
         #expect(Set(editor.keys) == keys)
         #expect(editor["id"] as? String == "00000000-0000-4000-8000-000000000001")
         #expect(editor["productName"] as? String == "Sample Editor")
         #expect(editor["vendor"] as? String == "Example Software")
+        #expect(editor["registeredName"] as? String == "")
         #expect(editor["registeredEmail"] as? String == "user@example.com")
         #expect(editor["purchaseDate"] is NSNull)
         #expect(editor["version"] as? String == "1.0")

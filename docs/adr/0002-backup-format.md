@@ -135,6 +135,7 @@ The plaintext is a UTF-8 JSON object, with no compression:
       "id": "00000000-0000-4000-8000-000000000001",
       "productName": "Sample Editor",
       "vendor": "Example Software",
+      "registeredName": "Jane Appleseed",
       "registeredEmail": "user@example.com",
       "purchaseDate": null,
       "version": "1.0",
@@ -161,6 +162,10 @@ The plaintext is a UTF-8 JSON object, with no compression:
 - `serial` is a string, or null when the Keychain item is missing. A Keychain item that exists but
   holds an empty value is also exported as null. Export never writes `""`, and every null serial
   is counted in `ExportSummary.missingSerialCount`. Import treats `""` exactly like null.
+- `registeredName` is the name the license is registered to ("nome e cognome"), `""` when unset.
+  It was added after version 1 shipped, so it is the one key import accepts as absent: a file
+  written before it decodes with `registeredName == ""`. Export always writes it. Section 7 covers
+  why this keeps the format at version 1.
 - Unknown keys are ignored on import.
 
 Applying an import:

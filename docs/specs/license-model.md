@@ -54,6 +54,9 @@ A SwiftData model `License` with its validation rules, plus unit tests on an in-
   `id: UUID`, `productName: String`, `vendor: String`, `registeredEmail: String`,
   `purchaseDate: Date?`, `version: String`, `notes: String`, `createdAt: Date`,
   `updatedAt: Date`. Names and types match `LicenseSummary`.
+  Later addition (ticket #17): `registeredName: String`, the person the license is registered to,
+  optional like the other text fields and declared with a `= ""` default so an existing store opens
+  without a migration. R1 still holds for the rest: the field list and `LicenseSummary` match.
 - R2. The model has no field that holds a serial, license key or any derived form of it.
 - R3. `productName` is required: creating or updating a `License` with an empty or
   whitespace-only product name fails with a typed error. The other fields may be left empty
