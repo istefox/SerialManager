@@ -177,9 +177,21 @@ struct BackupReaderTests {
 
     // MARK: A5, newer versions
 
+    /// `BackupFileBuilder` defaults to version 1, so every other test in this file already reads a
+    /// version 1 file. This one says so out loud: version 2 must not stop accepting version 1
+    /// (SPEC 0018, R22). "Newer" now means 3.
+    @Test func versionOneAndVersionTwoAreBothAccepted() throws {
+        for version in UInt16(1)...UInt16(2) {
+            var builder = BackupFileBuilder()
+            builder.version = version
+            let outcome = try read(builder.unsealed(), derivation: .stub(ReachedDerivation()))
+            #expect(outcome.error is ReachedDerivation, "version \(version) must reach derivation")
+        }
+    }
+
     @Test func newerVersionIsUnsupportedBeforeAnyOtherCheck() throws {
         var builder = BackupFileBuilder()
-        builder.version = 2
+        builder.version = 3
         builder.kdfID = 0x02
         let outcome = try read(builder.unsealed())
         #expect(outcome.error as? BackupError == .unsupportedVersion)
@@ -188,7 +200,7 @@ struct BackupReaderTests {
 
     @Test func newerVersionInATenByteFileIsUnsupported() throws {
         var builder = BackupFileBuilder()
-        builder.version = 2
+        builder.version = 3
         let outcome = try read(builder.unsealed().prefix(10))
         #expect(outcome.error as? BackupError == .unsupportedVersion)
     }
@@ -197,7 +209,7 @@ struct BackupReaderTests {
         let directory = try TemporaryDirectory()
         defer { directory.remove() }
         var builder = BackupFileBuilder()
-        builder.version = 2
+        builder.version = 3
         builder.kdfID = 0x02
         let url = try sparseFile(
             in: directory, start: builder.unsealed(), size: UInt64(BackupFormat.maxBackupFileSize) + 1)

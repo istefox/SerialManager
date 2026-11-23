@@ -6,6 +6,8 @@ struct LicenseDetailView: View {
     let store: LicenseStore
     var router: AppRouter?
     var onAddSerial: (() -> Void)?
+    /// Injected so a preview or a test never launches another application (R9, A18).
+    var opener = AttachmentOpener()
 
     @AppStorage(ClipboardSettings.delayKey) private var clearDelay = ClipboardSettings.defaultDelay
     @State private var lookup: LicenseStore.SerialLookup = .loading
@@ -37,6 +39,9 @@ struct LicenseDetailView: View {
                         Text(date, format: .dateTime.day().month(.wide).year())
                     }
                 }
+            }
+            if !license.attachments.isEmpty {
+                AttachmentsDetailSection(license: license, store: store, opener: opener)
             }
             if !license.notes.isEmpty {
                 Section("Notes") {

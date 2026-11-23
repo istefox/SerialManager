@@ -58,6 +58,7 @@ struct LicenseFormIntegrationTests {
         let repository = SwiftDataLicenseRepository(
             modelContainer: container,
             serials: serials,
+            attachments: .unusedForTests(),
             now: { clock.date }
         )
         let store = LicenseStore(repository: repository)
@@ -67,7 +68,9 @@ struct LicenseFormIntegrationTests {
 
     /// The stored state, read through a NEW repository instance. Call it only with no failure set.
     private func storedState(container: ModelContainer, serials: InMemorySerialStore) async throws -> StoredState {
-        let reader = SwiftDataLicenseRepository(modelContainer: container, serials: serials)
+        let reader = SwiftDataLicenseRepository(
+            modelContainer: container, serials: serials,
+            attachments: .unusedForTests())
         let licenses = try await reader.fetchAll().sorted { $0.id.uuidString < $1.id.uuidString }
         var stored: [UUID: String?] = [:]
         for license in licenses {

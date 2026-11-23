@@ -35,7 +35,10 @@ actor InMemoryBackupService: BackupService {
         for license in licenses where try await repository.serial(for: license.id) == nil {
             missing += 1
         }
-        return ExportSummary(licenseCount: licenses.count, missingSerialCount: missing)
+        return ExportSummary(
+            licenseCount: licenses.count,
+            missingSerialCount: missing,
+            attachmentCount: licenses.reduce(0) { $0 + $1.attachments.count })
     }
 
     func prepareImport(from url: URL, password: String) async throws -> ImportPreview {

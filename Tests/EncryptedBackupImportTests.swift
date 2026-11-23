@@ -29,7 +29,9 @@ struct EncryptedBackupImportTests {
     private func makeLibrary(_ serials: ScriptedSerialStore) throws -> SwiftDataLicenseRepository {
         let container = try ModelContainer(
             for: License.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
-        return SwiftDataLicenseRepository(modelContainer: container, serials: serials)
+        return SwiftDataLicenseRepository(
+            modelContainer: container, serials: serials,
+            attachments: .unusedForTests())
     }
 
     private static func ms(_ date: Date) -> Date {
@@ -62,7 +64,7 @@ struct EncryptedBackupImportTests {
         _ repository: SwiftDataLicenseRepository, _ serials: ScriptedSerialStore,
         _ license: LicenseSummary, serial: String?
     ) async throws {
-        _ = try await repository.importLicense(license, serial: serial, policy: .replace)
+        _ = try await repository.importLicense(license, serial: serial, attachments: [], policy: .replace)
         await serials.clearLog()
     }
 
@@ -131,6 +133,7 @@ struct EncryptedBackupImportTests {
             modelContainer: try ModelContainer(
                 for: License.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true)),
             serials: sourceSerials,
+            attachments: .unusedForTests(),
             now: { Date(timeIntervalSince1970: 1_767_258_000.250) })
         _ = try await source.create(LicenseDraft(productName: "Sample One", vendor: "Example", serial: "FAKE-0001"))
         _ = try await source.create(LicenseDraft(
@@ -204,7 +207,7 @@ struct EncryptedBackupImportTests {
             try builder.unsealed().write(to: url)
         case .newerVersion:
             var builder = BackupFileBuilder()
-            builder.version = 2
+            builder.version = 3
             try builder.unsealed().write(to: url)
         }
 

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Constants and header layout of backup format version 1 (docs/adr/0002-backup-format.md, section 3).
+/// Constants and header layout of the backup format (docs/adr/0002-backup-format.md, section 3).
 ///
 /// All integers are unsigned and big-endian. The header is bytes `[0, 33+S)`, where `S` is the salt
 /// length: 49 bytes with the v1 defaults. Import (#10) reuses these constants.
@@ -8,7 +8,12 @@ enum BackupFormat {
     /// ASCII `SMBACKUP`.
     static let magic = Data("SMBACKUP".utf8)
     /// The format version this app writes, and the newest one it reads.
-    static let version: UInt16 = 1
+    ///
+    /// Version 2 adds the `attachments` array to every license entry (SPEC 0018, D5 and R22).
+    /// Export always writes 2; import still reads 1, where a license simply has no attachments.
+    /// A build made before #18 refuses a version 2 file with `unsupportedVersion`, which is the
+    /// point: silently dropping a license file on a re-export would be worse.
+    static let version: UInt16 = 2
     /// PBKDF2-HMAC-SHA256.
     static let kdfID: UInt8 = 0x01
     /// Iteration count written by export (ADR 0002, section 1).
@@ -48,7 +53,7 @@ enum BackupFormat {
         size <= maxFileSize
     }
 
-    /// Version 1 header for the given salt, nonce and ciphertext length.
+    /// Header for the given salt, nonce and ciphertext length, at `version`.
     ///
     /// The caller checks the lengths: the salt must fit in one byte of length and the
     /// ciphertext length in a `UInt32`.

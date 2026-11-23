@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import SwiftData
 
@@ -34,6 +35,7 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
     nonisolated let modelExecutor: any ModelExecutor
 
     private let serials: any SerialStore
+    private let attachments: AttachmentFileStore
     private let makeID: @Sendable () -> UUID
     private let now: @Sendable () -> Date
     private let beforeSave: @Sendable () throws -> Void
@@ -50,10 +52,14 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
     /// - Parameters:
     ///   - makeID: id source for `create`; tests inject a fixed id to force a collision.
     ///   - now: clock for `createdAt` and `updatedAt`.
+    ///   - attachments: where the encrypted attachment files live and which key seals them. No
+    ///     default: a test or a preview must inject its own directory and key store, because Debug
+    ///     and Release share one bundle identifier (SPEC 0018, R9, R10 and A18).
     ///   - beforeSave: runs before every `save()`; tests make it throw to force a persist failure.
     init(
         modelContainer: ModelContainer,
         serials: any SerialStore,
+        attachments: AttachmentFileStore,
         makeID: @escaping @Sendable () -> UUID = { UUID() },
         now: @escaping @Sendable () -> Date = { Date() },
         beforeSave: @escaping @Sendable () throws -> Void = {}
@@ -64,6 +70,7 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
         self.modelContainer = modelContainer
         self.modelExecutor = DefaultSerialModelExecutor(modelContext: context)
         self.serials = serials
+        self.attachments = attachments
         self.makeID = makeID
         self.now = now
         self.beforeSave = beforeSave
@@ -72,7 +79,27 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
     // MARK: Reads (no lock: by I1 the context holds committed state only across suspensions)
 
     func fetchAll() async throws -> [LicenseSummary] {
-        try modelContext.fetch(FetchDescriptor<License>()).map(LicenseSummary.init)
+        // One grouped fetch of every attachment row, not one fetch per license.
+        let grouped = try attachmentSummariesByLicense()
+        return try modelContext.fetch(FetchDescriptor<License>()).map {
+            LicenseSummary($0, attachments: grouped[$0.id] ?? [])
+        }
+    }
+
+    /// Whether the encrypted file of `id` is still on disk.
+    ///
+    /// A `stat`, nothing more: no decryption, no Keychain call, no throw. The detail view calls it
+    /// to show a row whose file is gone as unreadable but still removable (R13, R21), the same way
+    /// a missing Keychain item is surfaced today instead of being carried in `LicenseSummary`.
+    func attachmentIsReadable(id: UUID) async -> Bool {
+        attachments.fileExists(id: id)
+    }
+
+    func attachmentData(id: UUID) async throws -> Data {
+        guard let record = try fetchAttachment(id) else { throw AttachmentError.notFound(id) }
+        // Never generates a key: a library with attachments whose key is gone must say so (R10).
+        let key = try await attachments.key(generateIfMissing: false)
+        return try attachments.read(id: record.id, key: key)
     }
 
     func serial(for id: UUID) async throws -> String? {
@@ -121,6 +148,7 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
             }
             throw error
         }
+        // A new license has no attachment yet.
         return LicenseSummary(license)
     }
 
@@ -167,7 +195,7 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
             if wroteSerial { await restoreSerial(old, for: id) }
             throw error
         }
-        return LicenseSummary(license)
+        return try summary(license)
     }
 
     func delete(id: UUID) async throws {
@@ -178,8 +206,13 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
         // Serial first (D1): if this fails, the entry is not touched. Runs for an unknown id too (R10).
         try await serials.deleteSerial(for: id)
 
+        // Rows go in the same save as the license, so no row survives its license (R13).
+        let attachmentIDs: [UUID]
         do {
             guard let license = try fetchLicense(id) else { return }
+            let rows = try fetchAttachments(of: id)
+            attachmentIDs = rows.map(\.id)
+            for row in rows { modelContext.delete(row) }
             modelContext.delete(license)
             try persist()
         } catch {
@@ -197,6 +230,107 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
             }
             throw error
         }
+
+        // Files last, once the rows are gone: a failure here leaves an orphan file, which is
+        // invisible and harmless, and never a row pointing at a missing file (R12, R13).
+        for attachmentID in attachmentIDs {
+            try? attachments.delete(id: attachmentID)
+        }
+    }
+
+    // MARK: Attachments
+
+    func addAttachment(_ file: AttachmentFile, to licenseID: UUID) async throws -> LicenseSummary {
+        await acquireMutationLock()
+        defer { releaseMutationLock() }
+
+        guard AttachmentRecord.isValidFileName(file.fileName) else {
+            throw AttachmentValidationError.emptyFileName
+        }
+        guard let license = try fetchLicense(licenseID) else {
+            throw LicenseRepositoryError.notFound(licenseID)
+        }
+
+        // Limits before anything is written (R16). Measured on the plaintext.
+        let existingRows = try modelContext.fetch(FetchDescriptor<AttachmentRecord>())
+        try AttachmentLimits.check(
+            byteCount: file.byteCount,
+            fileName: file.fileName,
+            licenseBytes: existingRows.filter { $0.licenseID == licenseID }.reduce(0) { $0 + $1.byteCount },
+            libraryBytes: existingRows.reduce(0) { $0 + $1.byteCount }
+        )
+
+        // The first attachment of the library may create the key; any later one must not (R10).
+        let key = try await attachments.key(generateIfMissing: existingRows.isEmpty)
+
+        // I2: fetch again after the key step, and take the row count again with it.
+        guard try fetchLicense(licenseID) != nil else {
+            throw LicenseRepositoryError.notFound(licenseID)
+        }
+
+        let record = try AttachmentRecord(
+            licenseID: licenseID,
+            fileName: file.fileName,
+            byteCount: file.byteCount,
+            contentType: file.contentType,
+            addedAt: now()
+        )
+
+        // File first, then the row (R12): no metadata row ever points at a missing file.
+        try attachments.write(file.data, id: record.id, key: key)
+        do {
+            modelContext.insert(record)
+            // D9: adding an attachment bumps the license's `updatedAt`. `License` is not modified
+            // by this ticket (D6), so the bump goes through its own `update`, with its own values.
+            try bumpUpdatedAt(license)
+            try persist()
+        } catch {
+            modelContext.rollback()
+            // Compensation: remove the file this call wrote, so no file outlives its failed row.
+            try? attachments.delete(id: record.id)
+            throw error
+        }
+        return try summary(license)
+    }
+
+    func removeAttachment(id: UUID) async throws -> LicenseSummary {
+        await acquireMutationLock()
+        defer { releaseMutationLock() }
+
+        guard let record = try fetchAttachment(id) else { throw AttachmentError.notFound(id) }
+        let licenseID = record.licenseID
+        guard let license = try fetchLicense(licenseID) else {
+            throw LicenseRepositoryError.notFound(licenseID)
+        }
+
+        // Row first, then the file: a failure to delete the file leaves an orphan file (harmless,
+        // R13), never a row pointing at a missing file.
+        do {
+            modelContext.delete(record)
+            try bumpUpdatedAt(license)
+            try persist()
+        } catch {
+            modelContext.rollback()
+            throw error
+        }
+        // Succeeds when the file is already gone, so an unreadable attachment is removable (R13).
+        try? attachments.delete(id: id)
+        return try summary(license)
+    }
+
+    /// Sets `updatedAt` to now by replaying the license's current fields through its own `update`
+    /// (D6: `License` gains no write path for this ticket).
+    private func bumpUpdatedAt(_ license: License) throws {
+        try license.update(
+            productName: license.productName,
+            vendor: license.vendor,
+            registeredName: license.registeredName,
+            registeredEmail: license.registeredEmail,
+            purchaseDate: license.purchaseDate,
+            version: license.version,
+            notes: license.notes,
+            now: now()
+        )
     }
 
     // MARK: Import
@@ -207,8 +341,12 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
     /// write, and the SwiftData upsert on `@Attribute(.unique)` is never what decides a conflict.
     /// The serial rules are its own: `applySerial` and `restoreSerial` are not reused, because an
     /// import never removes a Keychain item that existed before the call (plan 0010, F4).
-    func importLicense(_ record: LicenseSummary, serial: String?, policy: ConflictPolicy) async throws
-        -> LicenseImportOutcome {
+    func importLicense(
+        _ record: LicenseSummary,
+        serial: String?,
+        attachments importedAttachments: [AttachmentImport],
+        policy: ConflictPolicy
+    ) async throws -> LicenseImportOutcome {
         await acquireMutationLock()
         defer { releaseMutationLock() }
 
@@ -216,20 +354,64 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
         guard License.isValidProductName(record.productName) else {
             throw LicenseValidationError.emptyProductName
         }
+        for attachment in importedAttachments where !AttachmentRecord.isValidFileName(attachment.fileName) {
+            throw AttachmentValidationError.emptyFileName
+        }
         // `""` counts as no serial (ADR 0002).
         let wanted = serial.flatMap { $0.isEmpty ? nil : $0 }
 
         let exists = try fetchLicense(record.id) != nil
         switch (exists, policy) {
         case (true, .skip):
-            // No serial store call and no context change.
+            // No serial store call, no context change, and no attachment touched (R25).
             return .skipped
         case (true, .replace):
-            try await replaceImported(record, serial: wanted)
+            try await replaceImported(record, serial: wanted, attachments: importedAttachments)
             return .replaced
         case (false, _):
-            try await createImported(record, serial: wanted)
+            try await createImported(record, serial: wanted, attachments: importedAttachments)
             return .created
+        }
+    }
+
+    /// The attachments of `pending` that this library does not already hold, by id (D12, R25).
+    ///
+    /// An id already present locally is left alone, so its bytes, name and dates stay as they are.
+    /// No size limit is applied: an import never refuses an attachment for being over a limit.
+    private func newImportedAttachments(_ pending: [AttachmentImport]) throws -> [AttachmentImport] {
+        guard !pending.isEmpty else { return [] }
+        let known = Set(try modelContext.fetch(FetchDescriptor<AttachmentRecord>()).map(\.id))
+        var seen = Set<UUID>()
+        return pending.filter { !known.contains($0.id) && seen.insert($0.id).inserted }
+    }
+
+    /// Writes the files and inserts the rows of `pending`, inside the caller's pending save.
+    ///
+    /// Call sites hold no unsaved change across an `await`: the key is resolved before, and this
+    /// method is synchronous. `written` collects the ids whose file this call created, so the
+    /// caller can delete exactly those and no others (R15). It is `inout` on purpose: a `return`
+    /// value would be lost when attachment *k* of *n* throws, leaving the first *k* files on disk
+    /// with nothing allowed to sweep them later (R13).
+    private func insertImportedAttachments(
+        _ pending: [AttachmentImport],
+        licenseID: UUID,
+        key: SymmetricKey?,
+        written: inout [UUID]
+    ) throws {
+        guard !pending.isEmpty else { return }
+        guard let key else { throw AttachmentError.keyMissing }
+        for attachment in pending {
+            let row = try AttachmentRecord(
+                id: attachment.id,
+                licenseID: licenseID,
+                fileName: attachment.fileName,
+                byteCount: attachment.byteCount,
+                contentType: attachment.contentType,
+                addedAt: attachment.addedAt
+            )
+            try self.attachments.write(attachment.data, id: attachment.id, key: key)
+            written.append(attachment.id)
+            modelContext.insert(row)
         }
     }
 
@@ -238,7 +420,9 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
     /// With no serial in the file, an orphan item already stored under this id stays in place and the
     /// new license shows it. Accepted edge (plan 0010, 2.3): an import never removes an item it did not
     /// create.
-    private func createImported(_ record: LicenseSummary, serial wanted: String?) async throws {
+    private func createImported(
+        _ record: LicenseSummary, serial wanted: String?, attachments pending: [AttachmentImport]
+    ) async throws {
         let id = record.id
         // Built before any write: validation cannot fail after the serial step.
         let license = try License(
@@ -253,6 +437,10 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
             createdAt: record.createdAt,
             updatedAt: record.updatedAt
         )
+
+        // Key before any context change and before the serial step, so no unsaved change is held
+        // across an `await` (I1). Generated only when the library holds no attachment at all (R10).
+        let key = try await importKey(for: pending)
 
         let written = try await writeImportedSerial(wanted, for: id)
 
@@ -269,20 +457,38 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
             throw LicenseRepositoryError.duplicateID(id)
         }
 
+        var files: [UUID] = []
         do {
             modelContext.insert(license)
+            try insertImportedAttachments(
+                try newImportedAttachments(pending), licenseID: id, key: key, written: &files)
             try persist()
         } catch {
             modelContext.rollback()
+            // Only the files this call wrote (R15): an id already present locally was skipped.
+            for fileID in files { try? self.attachments.delete(id: fileID) }
             await undoImportedSerial(written, for: id)
             throw error
         }
     }
 
+    /// The key an import needs for `pending`, or nil when it needs none.
+    ///
+    /// A backup carrying attachments into a library that holds none creates the first key; with
+    /// attachments already stored, a missing key throws instead of being replaced (R10).
+    private func importKey(for pending: [AttachmentImport]) async throws -> SymmetricKey? {
+        guard !pending.isEmpty else { return nil }
+        let isLibraryEmpty = try modelContext.fetch(FetchDescriptor<AttachmentRecord>()).isEmpty
+        return try await attachments.key(generateIfMissing: isLibraryEmpty)
+    }
+
     /// Replace branch: every field and both dates come from the backup (D3). The local serial is
     /// kept when the file has none.
-    private func replaceImported(_ record: LicenseSummary, serial wanted: String?) async throws {
+    private func replaceImported(
+        _ record: LicenseSummary, serial wanted: String?, attachments pending: [AttachmentImport]
+    ) async throws {
         let id = record.id
+        let key = try await importKey(for: pending)
         let written = try await writeImportedSerial(wanted, for: id)
 
         // I2: fetch again after the serial store step.
@@ -299,6 +505,7 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
             throw LicenseRepositoryError.notFound(id)
         }
 
+        var files: [UUID] = []
         do {
             try license.restore(
                 productName: record.productName,
@@ -309,11 +516,17 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
                 version: record.version,
                 notes: record.notes,
                 createdAt: record.createdAt,
+                // Both dates come from the backup: the merged attachments never bump `updatedAt`
+                // (SPEC 0010 D3, SPEC 0018 D9 and R25).
                 updatedAt: record.updatedAt
             )
+            // Merge, never delete: a local attachment absent from the backup is left alone (D12).
+            try insertImportedAttachments(
+                try newImportedAttachments(pending), licenseID: id, key: key, written: &files)
             try persist()
         } catch {
             modelContext.rollback()
+            for fileID in files { try? self.attachments.delete(id: fileID) }
             await undoImportedSerial(written, for: id)
             throw error
         }
@@ -404,6 +617,36 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
         }
     }
 
+    /// The attachment rows of one license, in the contract's order: `addedAt` then `fileName`
+    /// (R11), with the row id last so the order is total.
+    private func fetchAttachments(of licenseID: UUID) throws -> [AttachmentRecord] {
+        let descriptor = FetchDescriptor<AttachmentRecord>(
+            predicate: #Predicate { $0.licenseID == licenseID })
+        return try modelContext.fetch(descriptor).sorted(by: AttachmentRecord.isOrderedBefore)
+    }
+
+    private func fetchAttachment(_ id: UUID) throws -> AttachmentRecord? {
+        var descriptor = FetchDescriptor<AttachmentRecord>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first
+    }
+
+    /// Every attachment row of the store, grouped by license and already ordered.
+    private func attachmentSummariesByLicense() throws -> [UUID: [AttachmentSummary]] {
+        let rows = try modelContext.fetch(FetchDescriptor<AttachmentRecord>())
+            .sorted(by: AttachmentRecord.isOrderedBefore)
+        return Dictionary(grouping: rows, by: \.licenseID)
+            .mapValues { $0.map(AttachmentSummary.init) }
+    }
+
+    /// Summary of a license fetched in this context, attachments included.
+    private func summary(_ license: License) throws -> LicenseSummary {
+        LicenseSummary(
+            license,
+            attachments: try fetchAttachments(of: license.id).map(AttachmentSummary.init)
+        )
+    }
+
     private func fetchLicense(_ id: UUID) throws -> License? {
         var descriptor = FetchDescriptor<License>(predicate: #Predicate { $0.id == id })
         descriptor.fetchLimit = 1
@@ -433,8 +676,33 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
     }
 }
 
+extension AttachmentRecord {
+    /// The contract's order: `addedAt`, then `fileName` compared the way the list compares names,
+    /// then `id` so two rows never swap places between two fetches of the same data.
+    static func isOrderedBefore(_ lhs: AttachmentRecord, _ rhs: AttachmentRecord) -> Bool {
+        if lhs.addedAt != rhs.addedAt { return lhs.addedAt < rhs.addedAt }
+        switch lhs.fileName.localizedStandardCompare(rhs.fileName) {
+        case .orderedAscending: return true
+        case .orderedDescending: return false
+        case .orderedSame: return lhs.id.uuidString < rhs.id.uuidString
+        }
+    }
+}
+
+extension AttachmentSummary {
+    init(_ record: AttachmentRecord) {
+        self.init(
+            id: record.id,
+            fileName: record.fileName,
+            byteCount: record.byteCount,
+            contentType: record.contentType,
+            addedAt: record.addedAt
+        )
+    }
+}
+
 private extension LicenseSummary {
-    init(_ license: License) {
+    init(_ license: License, attachments: [AttachmentSummary] = []) {
         self.init(
             id: license.id,
             productName: license.productName,
@@ -445,7 +713,8 @@ private extension LicenseSummary {
             version: license.version,
             notes: license.notes,
             createdAt: license.createdAt,
-            updatedAt: license.updatedAt
+            updatedAt: license.updatedAt,
+            attachments: attachments
         )
     }
 }

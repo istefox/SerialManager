@@ -2,6 +2,8 @@
 
 - Status: accepted
 - Date: 2026-11-19
+- Amended: 2026-11-23, format version 2 (attachments, #18). Sections 3, 5, 6 and 7 below carry
+  the change; everything else is unchanged since version 1.
 
 ## Context
 
@@ -42,7 +44,7 @@ Constraints:
   new, every export uses a new key as well: two exports of the same data with the same password
   produce different files.
 
-### 3. File layout, version 1
+### 3. File layout, versions 1 and 2
 
 The file is a binary header readable without the password, followed by the ciphertext of the
 JSON payload and the GCM tag. All integers are unsigned and big-endian. Offsets are in bytes;
@@ -51,7 +53,7 @@ JSON payload and the GCM tag. All integers are unsigned and big-endian. Offsets 
 | Offset | Size | Field | Value written by export (v1) | Import rule |
 | --- | --- | --- | --- | --- |
 | 0 | 8 | magic | ASCII `SMBACKUP` (`53 4D 42 41 43 4B 55 50`) | mismatch -> `corruptedFile` |
-| 8 | 2 | format version (UInt16) | `1` | `0` -> `corruptedFile`; above `1` -> `unsupportedVersion` |
+| 8 | 2 | format version (UInt16) | `2` (`1` before #18) | `0` -> `corruptedFile`; above `2` -> `unsupportedVersion` |
 | 10 | 1 | KDF id (UInt8) | `0x01` = PBKDF2-HMAC-SHA256 | any other value -> `corruptedFile` |
 | 11 | 4 | iterations (UInt32) | `600000` | outside [600,000, 10,000,000] -> `corruptedFile` |
 | 15 | 1 | salt length `S` (UInt8) | `16` | outside [16, 64] -> `corruptedFile` |
@@ -62,7 +64,9 @@ JSON payload and the GCM tag. All integers are unsigned and big-endian. Offsets 
 | 33+S | L | ciphertext | AES-GCM encryption of the UTF-8 JSON payload | |
 | 33+S+L | 16 | tag | GCM authentication tag | |
 
-- The header is bytes `[0, 33+S)`: 49 bytes with the v1 defaults. Those exact bytes, as read
+- Version 2 changes nothing in the header layout: only the value of the version field and the
+  payload (section 6). The envelope, the KDF, the cipher and every bound are those of version 1.
+- The header is bytes `[0, 33+S)`: 49 bytes with the defaults of both versions. Those exact bytes, as read
   from the file, are passed to AES-GCM as associated data, so a changed header fails
   authentication even when it passes the bound checks.
 - The length field makes every truncated file, and every file with trailing bytes, a
@@ -76,7 +80,7 @@ JSON payload and the GCM tag. All integers are unsigned and big-endian. Offsets 
   export" of ADR 0001.
 
 Worked example (acceptance example 1): an export with the fake password `sample-backup-pass`
-starts with `SMBACKUP`, then `00 01` (version 1), `01` (PBKDF2-HMAC-SHA256), `00 09 27 C0`
+starts with `SMBACKUP`, then `00 02` (version 2; `00 01` for a file written before #18), `01` (PBKDF2-HMAC-SHA256), `00 09 27 C0`
 (600,000), `10` (16-byte salt), the 16 salt bytes, `01` (AES-256-GCM), the 12 nonce bytes and the
 4-byte ciphertext length.
 
@@ -97,7 +101,7 @@ Import runs these steps in order and stops at the first failure:
 
 1. Read only the first 10 bytes (file handle, not the whole file). Fewer than 10 bytes, or a
    magic other than `SMBACKUP` -> `corruptedFile`.
-2. Version `0` -> `corruptedFile`; version above `1` -> `unsupportedVersion`. Nothing else is
+2. Version `0` -> `corruptedFile`; version above `2` -> `unsupportedVersion`. Nothing else is
    checked before this step, so a newer file reports `unsupportedVersion` whatever its size or
    the rest of its header, and no key is derived.
 3. File size above `maxBackupFileSize` -> `corruptedFile`. Only then is the rest of the file read.
@@ -106,7 +110,10 @@ Import runs these steps in order and stops at the first failure:
 5. Derive the key and open the sealed box with the header as associated data. Authentication
    failure -> `wrongPassword`.
 6. Decrypted bytes that are not valid UTF-8 JSON, a missing required key, a wrong type, an invalid
-   UUID or date, or two licenses with the same `id` -> `corruptedFile`.
+   UUID or date, or two licenses with the same `id` -> `corruptedFile`. The same holds inside
+   `attachments`: base64 that does not decode, a `byteCount` that does not equal the decoded
+   length, a negative `byteCount`, a file name that is not a single usable name, or the same
+   attachment `id` twice anywhere in the file.
 
 | Case | `BackupError` |
 | --- | --- |
@@ -118,6 +125,9 @@ Import runs these steps in order and stops at the first failure:
 | Truncated file, or trailing bytes | `corruptedFile` |
 | Authentication failure | `wrongPassword` |
 | Decrypted payload not valid JSON for this version | `corruptedFile` |
+| An attachment's base64 that does not decode, or a `byteCount` that does not match it | `corruptedFile` |
+| An attachment with a negative `byteCount`, a blank name, or a name holding `/`, `:` or NUL | `corruptedFile` |
+| The same attachment `id` twice, in one license or across two | `corruptedFile` |
 
 Known limit: AES-GCM cannot tell a wrong password from bytes altered after the export. A file
 whose ciphertext, tag or header was changed, but whose header still passes the checks of steps
@@ -142,7 +152,17 @@ The plaintext is a UTF-8 JSON object, with no compression:
       "notes": "",
       "createdAt": "2026-01-01T09:00:00.000Z",
       "updatedAt": "2026-01-01T09:00:00.000Z",
-      "serial": "FAKE-0000-0000-0000"
+      "serial": "FAKE-0000-0000-0000",
+      "attachments": [
+        {
+          "id": "00000000-0000-4000-8000-0000000000a1",
+          "fileName": "Licence.lic",
+          "contentType": "public.data",
+          "byteCount": 14,
+          "addedAt": "2026-01-02T09:00:00.000Z",
+          "data": "RkFLRS1GSUxFLTAwMDE="
+        }
+      ]
     }
   ]
 }
@@ -166,6 +186,29 @@ The plaintext is a UTF-8 JSON object, with no compression:
   It was added after version 1 shipped, so it is the one key import accepts as absent: a file
   written before it decodes with `registeredName == ""`. Export always writes it. Section 7 covers
   why this keeps the format at version 1.
+- `attachments` is the one key version 2 adds (#18, ADR 0004). Export always writes it, `[]` when
+  the license has none. A version 1 file has no `attachments` key and decodes with none; this is
+  the second key import accepts as absent, for the same reason `registeredName` is.
+  - `data` is the **plaintext** of the file, base64 encoded by `JSONEncoder`'s default `Data`
+    strategy. The library's own AES key never leaves the Mac and is never in the backup: the
+    backup's own password is what protects the bytes, and the importing Mac re-encrypts them under
+    its own library key. This is what makes the attachments survive a move to another Mac.
+  - `byteCount` is the plaintext size the library recorded. It must equal the decoded length of
+    `data`: a mismatch is `corruptedFile`, so a truncated or padded blob is never imported as if
+    it were whole.
+  - Every key must be present; `contentType` may be null but not missing.
+  - `fileName` must be a single usable file name. A blank name, or one holding `/`, `:` or NUL, or
+    `.` or `..`, is `corruptedFile`: Open writes a decrypted copy under that name, so a path
+    component in it would place the copy outside the folder the app chose.
+  - An `id` that appears twice, in one license or across two, is `corruptedFile`. The ids must be
+    unique for the same reason license ids must.
+  - An attachment whose stored file is already missing at export time is skipped and counted in
+    `ExportSummary.missingAttachmentCount`, exactly as a missing serial is (ADR 0004, decision 6).
+  - The size limits of ADR 0004 section 7 are **not** applied on import: a backup is
+    authoritative, so a library that is over the total restores in full. `maxBackupFileSize`
+    is the only hard stop, and it is checked before anything is written.
+  - Base64 inflates the bytes by 4/3, which is why the library total (40,000,000 plaintext bytes)
+    sits well under the 64 MiB file cap.
 - Unknown keys are ignored on import.
 
 Applying an import:
@@ -177,16 +220,36 @@ Applying an import:
   - `serial` non-null: the metadata and the Keychain item are both replaced.
   - `serial` null: only the metadata is replaced. The existing Keychain item on this Mac is kept;
     an import never deletes a Keychain item.
-- Conflict, `ConflictPolicy.skip`: the local entry and its Keychain item are left untouched.
+- Conflict, `ConflictPolicy.skip`: the local entry, its Keychain item and its attachments are left
+  untouched.
+
+Attachments follow the same shape as the serials, with one difference: an import never removes one.
+
+- No conflict: every attachment in the file is written, bytes re-encrypted under this Mac's library
+  key, with the `id`, `fileName`, `contentType`, `byteCount` and `addedAt` of the file. The dates
+  come from the backup, so importing does not move the license's `updatedAt`.
+- Conflict, `replace`: the attachments in the file are written, and a local attachment that is not
+  in the file is **kept**. Replace replaces what the backup carries; it never deletes an
+  attachment the backup does not know about.
+- An attachment `id` that already exists locally is **left as it is**: the local row and its file
+  are kept and the backup's copy is not written again. An attachment is immutable once added, so
+  the same id is the same file; re-writing it would only risk replacing a readable file with the
+  same bytes. An import adds attachments and never removes or rewrites one.
 
 ### 7. Versioning
 
-- Version 1 is the format described in this ADR.
+- Version 1 is the format described in this ADR without `attachments`; version 2 is the same
+  format with it (#18). The app reads both and always writes version 2.
 - Any incompatible change bumps the format version: a change to the header layout, a new KDF or
   cipher, new import bounds that older apps would reject, or removing, renaming or retyping a
   payload key, or adding a required one.
 - Adding an optional payload key (absent or null in older files) is compatible and keeps the
   current version. An older app ignores the key and loses it if it re-exports the data.
+- `attachments` was nonetheless given a new version, deliberately. The key itself is optional, but
+  a build made before #18 that imported a version 2 file would import the licenses and silently
+  drop every attached file. Version 2 makes that build answer `unsupportedVersion` ("This backup
+  was made with a newer version of SerialManager.") instead of losing data without a word. The
+  user-visible cost is that a backup made after #18 cannot be restored by an older build.
 - The app keeps reading every format version it has ever written. A new version adds a reader;
   it never removes an old one.
 - A file whose version is above the newest one the app supports fails with
@@ -226,7 +289,10 @@ Applying an import:
 - A lost password makes the backup unrecoverable: there is no reset or recovery path, and the UI
   should say so at export time.
 - A wrong password and a tampered file give the same message (known limit above).
-- An import can add serials but never removes one from the Keychain.
+- An import can add serials but never removes one from the Keychain, and the same holds for
+  attachments: a Replace keeps a local attachment the backup does not carry.
+- The backup is the only supported way to move attachments to another Mac: the bytes on disk are
+  sealed under a device-local Keychain key (ADR 0004).
 
 ## Alternatives considered
 

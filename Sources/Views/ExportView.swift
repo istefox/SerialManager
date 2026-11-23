@@ -13,8 +13,15 @@ struct ExportView: View {
             case .done(let summary, let url):
                 SummaryView(systemImage: "checkmark.circle", title: Text("Backup Exported")) {
                     Text("Exported \(summary.licenseCount) licenses.")
+                    if summary.attachmentCount > 0 {
+                        Text("Attachments included: \(summary.attachmentCount)")
+                    }
                     if summary.missingSerialCount > 0 {
                         Text("Without a serial in the Keychain: \(summary.missingSerialCount)")
+                            .foregroundStyle(.secondary)
+                    }
+                    if summary.missingAttachmentCount > 0 {
+                        Text("Attachments whose stored file was missing, not included: \(summary.missingAttachmentCount)")
                             .foregroundStyle(.secondary)
                     }
                 } actions: {
@@ -132,7 +139,7 @@ private let previewService = InMemoryBackupService(repository: .sample())
 #Preview("Export, done") {
     ExportView(model: ExportModel(
         service: previewService,
-        phase: .done(ExportSummary(licenseCount: 5, missingSerialCount: 1),
+        phase: .done(ExportSummary(licenseCount: 5, missingSerialCount: 1, attachmentCount: 3),
                      URL(fileURLWithPath: "/tmp/Sample.smbackup"))
     ))
 }

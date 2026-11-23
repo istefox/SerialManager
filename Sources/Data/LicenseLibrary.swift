@@ -17,7 +17,16 @@ enum LicenseLibrary {
             .appending(path: "Licenses.store", directoryHint: .notDirectory)
     }
 
-    /// Creates the parent directory if needed, then opens a persistent container for `License`.
+    /// `Application Support/<folderName>/Attachments`, one encrypted file per attachment
+    /// (ADR 0004). Separate from the store file so a store copy never carries the blobs.
+    static var defaultAttachmentsDirectory: URL {
+        URL.applicationSupportDirectory
+            .appending(path: folderName, directoryHint: .isDirectory)
+            .appending(path: "Attachments", directoryHint: .isDirectory)
+    }
+
+    /// Creates the parent directory if needed, then opens a persistent container for `License`
+    /// and `AttachmentRecord`.
     static func makeContainer(at url: URL) throws -> ModelContainer {
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
@@ -26,17 +35,26 @@ enum LicenseLibrary {
         // Explicitly local: the app has no CloudKit entitlement, and the library must not start
         // syncing if one is ever added for another reason.
         let configuration = ModelConfiguration(url: url, cloudKitDatabase: .none)
-        return try ModelContainer(for: License.self, configurations: configuration)
+        // Adding `AttachmentRecord` to the container is a lightweight migration: no property of
+        // `License` changed, so a store written before #18 opens unchanged (SPEC 0018, R14).
+        return try ModelContainer(
+            for: License.self, AttachmentRecord.self, configurations: configuration)
     }
 
     /// The real repository, or `UnavailableLicenseRepository` when the library cannot be opened.
     /// Never falls back to an in-memory store, which would silently discard what the user types (D8).
     static func makeRepository(
         at url: URL = defaultStoreURL,
-        serials: any SerialStore = KeychainSerialStore()
+        serials: any SerialStore = KeychainSerialStore(),
+        attachments: AttachmentFileStore = AttachmentFileStore(
+            directory: defaultAttachmentsDirectory, keys: KeychainAttachmentKeyStore())
     ) -> any LicenseRepository {
         do {
-            return SwiftDataLicenseRepository(modelContainer: try makeContainer(at: url), serials: serials)
+            return SwiftDataLicenseRepository(
+                modelContainer: try makeContainer(at: url),
+                serials: serials,
+                attachments: attachments
+            )
         } catch {
             return UnavailableLicenseRepository()
         }

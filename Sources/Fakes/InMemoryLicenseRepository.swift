@@ -6,6 +6,9 @@ actor InMemoryLicenseRepository: LicenseRepository {
 
     private var licenses: [UUID: LicenseSummary] = [:]
     private var serials: [UUID: String] = [:]
+    /// Plaintext bytes per attachment id. In memory and in the clear on purpose: this fake is for
+    /// previews and tests, never for production (SPEC 0018, R28).
+    private var attachmentData: [UUID: Data] = [:]
     private var failure: (any Error)?
     private let now: @Sendable () -> Date
 
@@ -73,6 +76,7 @@ actor InMemoryLicenseRepository: LicenseRepository {
 
     func delete(id: UUID) async throws {
         try check()
+        for attachment in licenses[id]?.attachments ?? [] { attachmentData[attachment.id] = nil }
         licenses[id] = nil
         serials[id] = nil
     }
@@ -84,20 +88,97 @@ actor InMemoryLicenseRepository: LicenseRepository {
 
     /// Same outcomes and serial rules as the SwiftData repository: `""` counts as no serial, a
     /// stored serial is never removed, `.skip` changes nothing.
-    func importLicense(_ license: LicenseSummary, serial: String?, policy: ConflictPolicy) async throws
-        -> LicenseImportOutcome {
+    func importLicense(
+        _ license: LicenseSummary,
+        serial: String?,
+        attachments: [AttachmentImport],
+        policy: ConflictPolicy
+    ) async throws -> LicenseImportOutcome {
         try check()
+        let local = licenses[license.id]
         let outcome: LicenseImportOutcome
-        switch (licenses[license.id] != nil, policy) {
+        switch (local != nil, policy) {
         case (true, .skip): return .skipped
         case (true, .replace): outcome = .replaced
         case (false, _): outcome = .created
         }
-        licenses[license.id] = license
+        // Merge by id, never delete, no limit, and the dates stay as the backup wrote them (D12).
+        var merged = local?.attachments ?? []
+        let known = Set(merged.map(\.id))
+        for attachment in attachments where !known.contains(attachment.id) {
+            merged.append(AttachmentSummary(
+                id: attachment.id,
+                fileName: attachment.fileName,
+                byteCount: attachment.byteCount,
+                contentType: attachment.contentType,
+                addedAt: attachment.addedAt
+            ))
+            attachmentData[attachment.id] = attachment.data
+        }
+        var stored = license
+        stored.attachments = merged.sorted(by: Self.isOrderedBefore)
+        licenses[license.id] = stored
         if let serial, !serial.isEmpty {
             serials[license.id] = serial
         }
         return outcome
+    }
+
+    func addAttachment(_ file: AttachmentFile, to licenseID: UUID) async throws -> LicenseSummary {
+        try check()
+        guard AttachmentRecord.isValidFileName(file.fileName) else {
+            throw AttachmentValidationError.emptyFileName
+        }
+        guard var license = licenses[licenseID] else { throw NotFound() }
+        try AttachmentLimits.check(
+            byteCount: file.byteCount,
+            fileName: file.fileName,
+            licenseBytes: license.attachmentBytes,
+            libraryBytes: licenses.values.reduce(0) { $0 + $1.attachmentBytes }
+        )
+        let summary = AttachmentSummary(
+            id: UUID(),
+            fileName: file.fileName,
+            byteCount: file.byteCount,
+            contentType: file.contentType,
+            addedAt: now()
+        )
+        attachmentData[summary.id] = file.data
+        license.attachments = (license.attachments + [summary]).sorted(by: Self.isOrderedBefore)
+        license.updatedAt = now()
+        licenses[licenseID] = license
+        return license
+    }
+
+    func removeAttachment(id: UUID) async throws -> LicenseSummary {
+        try check()
+        guard var license = licenses.values.first(where: { $0.attachments.contains(where: { $0.id == id }) })
+        else { throw AttachmentError.notFound(id) }
+        license.attachments.removeAll { $0.id == id }
+        license.updatedAt = now()
+        licenses[license.id] = license
+        attachmentData[id] = nil
+        return license
+    }
+
+    func attachmentIsReadable(id: UUID) async -> Bool {
+        attachmentData[id] != nil
+    }
+
+    func attachmentData(id: UUID) async throws -> Data {
+        try check()
+        guard let data = attachmentData[id] else { throw AttachmentError.fileMissing(id) }
+        return data
+    }
+
+    /// Same order as the real repository: `addedAt`, then the file name, then the id.
+    private static func isOrderedBefore(_ lhs: AttachmentSummary, _ rhs: AttachmentSummary) -> Bool {
+        if lhs.addedAt != rhs.addedAt { return lhs.addedAt < rhs.addedAt }
+        switch lhs.fileName.localizedStandardCompare(rhs.fileName) {
+        case .orderedAscending: return true
+        case .orderedDescending: return false
+        case .orderedSame: return lhs.id.uuidString < rhs.id.uuidString
+        }
     }
 
     private func store(serial: String, for id: UUID) {

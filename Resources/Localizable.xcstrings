@@ -1,6 +1,46 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ couldn't be read.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile leggere %@."
+          }
+        }
+      }
+    },
+    "%@ couldn't be read: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile leggere %@: %@"
+          }
+        }
+      }
+    },
+    "%@ isn't a usable file name.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ non è un nome di file utilizzabile."
+          }
+        }
+      }
+    },
+    "Add File…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi file…"
+          }
+        }
+      }
+    },
     "Add License": {
       "localizations": {
         "it": {
@@ -27,6 +67,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aggiungi i numeri di serie dei tuoi programmi per ritrovarli qui."
+          }
+        }
+      }
+    },
+    "Adding “%@” would take this license over %@ of attachments, its maximum.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungere “%@” porterebbe questa licenza oltre %@ di allegati, il suo massimo."
+          }
+        }
+      }
+    },
+    "Adding “%@” would take your library over %@ of attachments in total, the maximum that still fits in a backup.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungere “%@” porterebbe la tua libreria oltre %@ di allegati in totale, il massimo che sta ancora in un backup."
           }
         }
       }
@@ -67,6 +127,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dopo che hai copiato un seriale, SerialManager lo toglie dagli appunti. Quello che copi dopo non viene toccato."
+          }
+        }
+      }
+    },
+    "All Fields": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti i campi"
           }
         }
       }
@@ -127,6 +197,46 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Attachment Name": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome dell'allegato"
+          }
+        }
+      }
+    },
+    "Attachments": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allegati"
+          }
+        }
+      }
+    },
+    "Attachments included: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allegati inclusi: %lld"
+          }
+        }
+      }
+    },
+    "Attachments whose stored file was missing, not included: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allegati il cui file era mancante, non inclusi: %lld"
           }
         }
       }
@@ -251,6 +361,16 @@
         }
       }
     },
+    "Couldn't Open the Attachment": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile aprire l'allegato"
+          }
+        }
+      }
+    },
     "Couldn't Save the License": {
       "localizations": {
         "it": {
@@ -277,6 +397,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Data"
+          }
+        }
+      }
+    },
+    "Date Added, Newest First": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data di inserimento, dalla più recente"
+          }
+        }
+      }
+    },
+    "Date Added, Oldest First": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data di inserimento, dalla più vecchia"
+          }
+        }
+      }
+    },
+    "Date Modified, Newest First": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data di modifica, dalla più recente"
+          }
+        }
+      }
+    },
+    "Date Modified, Oldest First": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data di modifica, dalla più vecchia"
           }
         }
       }
@@ -337,6 +497,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Scartare le modifiche?"
+          }
+        }
+      }
+    },
+    "Don't add %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non aggiungere %@"
           }
         }
       }
@@ -471,6 +641,16 @@
         }
       }
     },
+    "File missing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File mancante"
+          }
+        }
+      }
+    },
     "Hidden": {
       "localizations": {
         "it": {
@@ -561,6 +741,26 @@
         }
       }
     },
+    "Its file is already missing, so there is nothing left to recover.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il suo file è già mancante, quindi non c'è più nulla da recuperare."
+          }
+        }
+      }
+    },
+    "Keep %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantieni %@"
+          }
+        }
+      }
+    },
     "Keep Editing": {
       "localizations": {
         "it": {
@@ -601,6 +801,16 @@
         }
       }
     },
+    "More actions for %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altre azioni per %@"
+          }
+        }
+      }
+    },
     "Name": {
       "localizations": {
         "it": {
@@ -611,12 +821,32 @@
         }
       }
     },
-    "Name or vendor": {
+    "Name, A to Z": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nome o produttore"
+            "value": "Nome, dalla A alla Z"
+          }
+        }
+      }
+    },
+    "Name, Z to A": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome, dalla Z alla A"
+          }
+        }
+      }
+    },
+    "Name, vendor, registered name, attachment…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome, produttore, nome e cognome, allegato…"
           }
         }
       }
@@ -651,6 +881,26 @@
         }
       }
     },
+    "No Results": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun risultato"
+          }
+        }
+      }
+    },
+    "No license has %@ in %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna licenza contiene %@ in %@."
+          }
+        }
+      }
+    },
     "Notes": {
       "localizations": {
         "it": {
@@ -667,6 +917,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "OK"
+          }
+        }
+      }
+    },
+    "Open": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri"
           }
         }
       }
@@ -741,6 +1001,36 @@
         }
       }
     },
+    "Remove": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi"
+          }
+        }
+      }
+    },
+    "Remove %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi %@"
+          }
+        }
+      }
+    },
+    "Remove “%@”?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovere “%@”?"
+          }
+        }
+      }
+    },
     "Replace": {
       "localizations": {
         "it": {
@@ -767,6 +1057,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "Salva"
+          }
+        }
+      }
+    },
+    "Save a Copy…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva una copia…"
+          }
+        }
+      }
+    },
+    "Search All Fields": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca in tutti i campi"
+          }
+        }
+      }
+    },
+    "Search In": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca in"
+          }
+        }
+      }
+    },
+    "Search attachment names": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca nei nomi degli allegati"
+          }
+        }
+      }
+    },
+    "Search notes": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca nelle note"
+          }
+        }
+      }
+    },
+    "Search product names": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca nei nomi dei prodotti"
+          }
+        }
+      }
+    },
+    "Search registered names": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca nel nome e cognome"
+          }
+        }
+      }
+    },
+    "Search vendors": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca nei produttori"
           }
         }
       }
@@ -807,6 +1177,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "SerialManager non è riuscito ad aprire il file dell'archivio. Esci e riapri l'app; se il problema si ripete, controlla il disco."
+          }
+        }
+      }
+    },
+    "SerialManager couldn't reach the key that protects your attachments. Allow access when macOS asks, then try again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SerialManager non ha potuto accedere alla chiave che protegge i tuoi allegati. Consenti l'accesso quando macOS lo chiede, poi riprova."
           }
         }
       }
@@ -861,6 +1241,36 @@
         }
       }
     },
+    "Sort By": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordina per"
+          }
+        }
+      }
+    },
+    "Sort and Search Options": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opzioni di ordinamento e ricerca"
+          }
+        }
+      }
+    },
+    "Sorted by %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordinato per %@"
+          }
+        }
+      }
+    },
     "The backup contains all your licenses and serials, encrypted with this password. You need it to restore the backup: it can't be recovered if you forget it.": {
       "localizations": {
         "it": {
@@ -881,12 +1291,12 @@
         }
       }
     },
-    "The backup is larger than 64 MB, the maximum size.": {
+    "The backup is larger than 64 MB, the maximum size. Attachments are the usual cause: remove a few of the largest ones and try again.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il backup supera i 64 MB, la dimensione massima."
+            "value": "Il backup supera i 64 MB, la dimensione massima. Di solito la causa sono gli allegati: rimuovine qualcuno fra i più grandi e riprova."
           }
         }
       }
@@ -901,12 +1311,82 @@
         }
       }
     },
+    "The file of this attachment is missing, so it can't be opened. You can remove it and add the file again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il file di questo allegato è mancante, quindi non può essere aperto. Puoi rimuoverlo e aggiungere di nuovo il file."
+          }
+        }
+      }
+    },
     "The import stopped. Imported: %lld. Replaced: %lld.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "L'importazione si è interrotta. Importate: %lld. Sostituite: %lld."
+          }
+        }
+      }
+    },
+    "The key that protects your attachments couldn't be read from the Keychain.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stato possibile leggere dal Portachiavi la chiave che protegge i tuoi allegati."
+          }
+        }
+      }
+    },
+    "The key that protects your attachments is missing from the Keychain, so they can't be read. Restore a backup of your Keychain, or import a SerialManager backup.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La chiave che protegge i tuoi allegati non è più nel Portachiavi, quindi non possono essere letti. Ripristina un backup del Portachiavi, oppure importa un backup di SerialManager."
+          }
+        }
+      }
+    },
+    "The key that protects your attachments is stored in a form SerialManager doesn't recognize.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La chiave che protegge i tuoi allegati è memorizzata in una forma che SerialManager non riconosce."
+          }
+        }
+      }
+    },
+    "The license was saved, but %@ couldn't be added: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La licenza è stata salvata, ma non è stato possibile aggiungere %@: %@"
+          }
+        }
+      }
+    },
+    "The license was saved, but %@ couldn't be added: %@ %lld files were not added.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La licenza è stata salvata, ma non è stato possibile aggiungere %@: %@ %lld file non sono stati aggiunti."
+          }
+        }
+      }
+    },
+    "The license was saved, but an attachment couldn't be removed: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La licenza è stata salvata, ma non è stato possibile rimuovere un allegato: %@"
           }
         }
       }
@@ -947,6 +1427,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Viene eliminato anche il seriale dal Portachiavi. L'operazione non si può annullare."
+          }
+        }
+      }
+    },
+    "This attachment couldn't be decrypted. Its file may be damaged.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stato possibile decifrare questo allegato. Il suo file potrebbe essere danneggiato."
+          }
+        }
+      }
+    },
+    "This attachment couldn't be encrypted. Try again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stato possibile cifrare questo allegato. Riprova."
+          }
+        }
+      }
+    },
+    "This attachment is no longer in your library.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo allegato non è più nella tua libreria."
           }
         }
       }
@@ -1011,6 +1521,26 @@
         }
       }
     },
+    "Will be added when you save": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verrà aggiunto al salvataggio"
+          }
+        }
+      }
+    },
+    "Will be removed when you save": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verrà rimosso al salvataggio"
+          }
+        }
+      }
+    },
     "Without a serial in the Keychain: %lld": {
       "localizations": {
         "it": {
@@ -1047,6 +1577,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le licenze attuali restano come sono."
+          }
+        }
+      }
+    },
+    "macOS found no application to open “%@”. Use Save a Copy and open it yourself.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS non ha trovato un'applicazione per aprire “%@”. Usa Salva una copia e aprilo tu."
+          }
+        }
+      }
+    },
+    "“%@” is larger than %@, the maximum size of one attachment.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” supera %@, la dimensione massima di un singolo allegato."
           }
         }
       }

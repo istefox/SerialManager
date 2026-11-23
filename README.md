@@ -57,11 +57,62 @@ To change a license, select it and choose License > Edit License (Licenza > Modi
 press `Cmd+E`, or click Edit (Modifica) in the toolbar. To delete it, choose License > Delete
 License… (Licenza > Elimina licenza…) or click Delete (Elimina) in the toolbar, then confirm.
 
+### Attach files to a license
+
+A license can carry files: the licence file the vendor sent, the invoice, a screenshot of the
+registration page.
+
+1. Open the form for a new or an existing license (see Add a license).
+2. In Attachments (Allegati), click Add File… (Aggiungi file…) and choose one or more files.
+3. Click Save (Salva). Nothing is written before you save: until then a file reads "Will be added
+   when you save" (Verrà aggiunto al salvataggio) and you can drop it again.
+
+To remove one, open the form, click Remove (Rimuovi) next to it and save.
+
+Each file is **copied** into the app, encrypted, so moving or deleting your original afterwards
+changes nothing. The limits are 5 MB per file, 20 MB per license and 40 MB in the whole library;
+a file over a limit is refused with a message that says which limit it hit.
+
+On a selected license, Attachments shows each file with Open (Apri) and, in the "…" menu, Save a
+Copy… (Salva una copia…).
+
+- Open decrypts the file into a temporary folder and hands it to macOS, which opens it in whatever
+  application handles that type. That temporary copy is deleted when you quit the app. One known
+  limit: if the file is an installer that moves or consumes what it is given, it consumes that
+  temporary copy; the attachment in SerialManager is untouched, but use Save a Copy… when you
+  intend to hand the file to something that will modify it.
+- Save a Copy… writes the file wherever you choose. That copy is yours, in the clear, and the app
+  never touches it again.
+
+If an attachment reads "File missing" (File mancante), its file is no longer on this Mac (deleted
+from `~/Library/Application Support/<bundle id>/Attachments/`, or restored from a backup of the
+database alone). There is nothing left to recover: click Remove (Rimuovi) and attach the file
+again, or import a `.smbackup` that contains it.
+
+Attachments are encrypted with a key kept in this Mac's Keychain, like the serials. Copying the
+app's folder to another Mac therefore yields files that cannot be read; the encrypted export is
+the way to move them (see Moving to another Mac).
+
 ### Find a license
 
-Type in the search field at the top of the sidebar, "Name or vendor" (Nome o produttore). The
-list keeps the licenses whose product name or vendor contains the text: `acme` finds
-`Acme Editor`, `zzz` finds nothing.
+Type in the search field at the top of the sidebar. The list keeps the licenses that match the
+text, ignoring case and accents: `acme` finds `Acme Editor`, `zzz` finds nothing.
+
+By default the search looks at the product name, the vendor, the registered name, the registered
+email, the version, the notes **and the names of the attached files**. To search one field only,
+open the "Sort and Search Options" menu (Opzioni di ordinamento e ricerca) in the toolbar and pick
+one under Search In (Cerca in): Product Name, Vendor, Registered Name, Attachment Name or Notes. The search field then says which field it is looking at, and a search
+with no results offers Search All Fields (Cerca in tutti i campi) to widen it again. The choice
+goes back to All Fields (Tutti i campi) the next time you open the app.
+
+**The serial is never searched**, whatever the scope.
+
+### Sort the list
+
+In the same "Sort and Search Options" menu, Sort By (Ordina per) offers six orders: Name A to Z
+(the default), Name Z to A, Date Added newest or oldest first, Date Modified newest or oldest
+first. Names sort the way the Finder sorts them, so case and accents do not change the order and
+`iPhoto 2` comes before `iPhoto 10`. The app remembers the order you chose for the next launch.
 
 ### Copy a serial
 
@@ -89,7 +140,8 @@ overwrites every license already present with its backup copy).
    Password (Conferma password).
 3. Click Export… (Esporta…) and choose where to save the file.
 
-The `.smbackup` file holds every license and its serial, encrypted with that password. The
+The `.smbackup` file holds every license, its serial **and its attached files**, encrypted with
+that password. The
 password cannot be recovered: if you forget it, the backup cannot be opened. Keep the file and
 the password in separate places, for example the file on an external disk and the password in
 your password manager.
@@ -105,6 +157,16 @@ your password manager.
 4. The summary shows how many licenses were Imported (Importate), Replaced (Sostituite) and
    Skipped (Saltate).
 
+Attachments come with their licenses. Replace (Sostituisci) adds the files the backup carries that
+this Mac does not have yet and keeps every file already attached here: an import never deletes an
+attachment, and never replaces one it already has.
+A backup made before this feature existed carries no attachments, and importing it leaves the
+ones you already have alone.
+
+A backup made by this version of the app cannot be restored by an earlier one: the older app says
+the backup was made with a newer version of SerialManager rather than import the licenses and
+silently drop their files.
+
 Clicking Cancel (Annulla) at any point before the last Import (Importa) writes nothing.
 
 A wrong password ("The password is incorrect.", La password non è corretta.), a file that is not
@@ -114,16 +176,17 @@ says how many.
 
 ### Moving to another Mac
 
-**Copying the database to another Mac moves your licenses but not their serials: to move the
-serials, use the encrypted export.**
+**Copying the database to another Mac moves your licenses but not their serials or their
+attachments: to move those, use the encrypted export.**
 
 In the installed (Release) app the license entries live in the database files in
 `~/Library/Application Support/<bundle id>/` (`Licenses.store` and the files next to it), but
 the serials live in this Mac's Keychain, as items that do not migrate to a new device and are
 not synced. A copied database therefore shows every license with the "missing from the
-Keychain" message.
+Keychain" message. The attached files are in `Attachments/` in that same folder, but they are
+encrypted with a key that is also in this Mac's Keychain, so copied files cannot be read either.
 
-The encrypted export is the only supported way to move the serials:
+The encrypted export is the only supported way to move the serials and the attachments:
 
 1. On the old Mac, export a backup (see Back up your licenses).
 2. Move the `.smbackup` file to the new Mac.

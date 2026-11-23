@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 @main
@@ -28,6 +29,17 @@ struct SerialManagerApp: App {
         backupService = EncryptedBackupService(repository: repository)
         #endif
         _store = State(initialValue: LicenseStore(repository: repository))
+        // Defensively at launch, in case a previous run was killed before it could clean up: a
+        // decrypted copy of an attachment must not outlive the session that made it (R19). Safe
+        // as a blanket delete because only this feature writes in that directory.
+        AttachmentOpener.cleanUp()
+        // And at quit, which is the normal case. `onDisappear` on the window is not reliable for
+        // termination, so this listens for the notification AppKit always posts.
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+        ) { _ in
+            AttachmentOpener.cleanUp()
+        }
     }
 
     var body: some Scene {

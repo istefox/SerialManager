@@ -40,11 +40,13 @@ struct LicenseLibraryTests {
         let storeURL = root.appending(path: "Library/Licenses.store")
         let serials = InMemorySerialStore()
 
-        let first = LicenseLibrary.makeRepository(at: storeURL, serials: serials)
+        let first = LicenseLibrary.makeRepository(
+            at: storeURL, serials: serials, attachments: .unusedForTests())
         #expect(first is SwiftDataLicenseRepository)
         let created = try await first.create(LicenseDraft(productName: "Example App", serial: "ACME-0000-TEST-0000"))
 
-        let reopened = LicenseLibrary.makeRepository(at: storeURL, serials: serials)
+        let reopened = LicenseLibrary.makeRepository(
+            at: storeURL, serials: serials, attachments: .unusedForTests())
         #expect(try await reopened.fetchAll().map(\.id) == [created.id])
         #expect(try await reopened.serial(for: created.id) == "ACME-0000-TEST-0000")
     }
@@ -58,7 +60,8 @@ struct LicenseLibraryTests {
 
         let repository = LicenseLibrary.makeRepository(
             at: blocker.appending(path: "Licenses.store"),
-            serials: InMemorySerialStore()
+            serials: InMemorySerialStore(),
+            attachments: .unusedForTests()
         )
 
         #expect(repository is UnavailableLicenseRepository)

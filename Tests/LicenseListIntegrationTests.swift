@@ -39,7 +39,9 @@ struct LicenseListIntegrationTests {
 
     /// The only place that names #4's concrete type (plan 0005, section 2, question 1).
     private func makeRepository(container: ModelContainer, serials: any SerialStore) -> any LicenseRepository {
-        SwiftDataLicenseRepository(modelContainer: container, serials: serials)
+        SwiftDataLicenseRepository(
+            modelContainer: container, serials: serials,
+            attachments: .unusedForTests())
     }
 
     /// Creates `fixtures` through the repository, in their given order.

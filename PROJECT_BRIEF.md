@@ -18,11 +18,12 @@ reinstalling software or moving to a new Mac quick and reliable.
 ## Scope
 
 **In scope (v1):**
-- List of licenses with search
+- List of licenses with search by field and six sort orders
 - Create, edit and delete a license entry
 - Copy a serial to the clipboard
+- Files attached to a license, stored as encrypted copies
 - Local, on-device storage (SwiftData + Keychain)
-- Encrypted JSON export and import for backup
+- Encrypted JSON export and import for backup, attachments included
 
 **Out of scope (for now):**
 - iOS/iPadOS version
@@ -36,12 +37,14 @@ reinstalling software or moving to a new Mac quick and reliable.
 - SwiftUI app generated with Tuist, Swift 6 strict concurrency, macOS 14 deployment target.
 - Bundle identifier `it.stefer.SerialManager`, automatic signing.
 - Storage (see `docs/adr/0001-storage.md`): entry metadata in SwiftData, serials in the macOS Keychain keyed by entry UUID, backup as a password-protected encrypted JSON export, whose format and encryption are fixed in `docs/adr/0002-backup-format.md` (versioned `.smbackup` file, PBKDF2-HMAC-SHA256 through CommonCrypto, AES-256-GCM through CryptoKit, password of at least 12 characters).
+- Attachments (see `docs/adr/0004-attachment-storage.md`): metadata in SwiftData, bytes in one AES-256-GCM file per attachment named by its id, under one add-only library key in the Keychain; the backup carries the plaintext base64 encoded, which moves it to format version 2.
 
 ## Milestones
 
 1. Data model, SwiftData persistence and Keychain storage of serials
 2. Main window: list, search, detail and edit form
 3. Encrypted JSON export and import
+4. Attachments, search by field and sorting
 
 ## Status
 
@@ -51,6 +54,8 @@ reinstalling software or moving to a new Mac quick and reliable.
 - 2026-11-21: encrypted export shipped (#9, PR #11): File > Export writes an ADR 0002 v1 backup in Release builds; Import stays disabled until #10.
 - 2026-11-21: encrypted import shipped (#10, PR #16): File > Import restores an ADR 0002 v1 backup, also into an empty library, with Skip or Replace for licenses already present; an import never deletes a serial from the Keychain. The owner-run Release checklist (`docs/qa/encrypted-import-release-checklist.md`) and macOS 14 are still to be run.
 - 2026-11-23: #10 and epic #1 closed. The import conflict message now pluralizes correctly in English and Italian (PRs #22, #23). QA checked the import flow on fake data in the Debug app (7 of 7 checks). The owner-run Release checklist and macOS 14 were not run, a gap the owner accepted. The Release build of d36a862 runs on the owner's Mac with its existing library intact.
+
+- 2026-11-23: attachments, field search and sorting implemented (#18, SPEC 0018, ADR 0004; ADR 0002 amended to format version 2). A license can carry encrypted file copies, the sidebar sorts six ways and searches seven fields or one, and the backup carries the attached files. A backup written from now on is refused by an earlier build, by design. Not yet merged, and the Release-only checks of SPEC 0018 (the migration of a real `Licenses.store`, the Keychain key, Open and Save a Copy, the backup round trip) are still to be run by the owner.
 
 ## Open questions
 

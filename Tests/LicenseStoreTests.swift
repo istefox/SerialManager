@@ -111,7 +111,10 @@ struct InMemoryBackupServiceTests {
     @Test func exportCountsMissingSerials() async throws {
         let service = InMemoryBackupService(repository: .sample())
         let summary = try await service.export(to: URL(fileURLWithPath: "/tmp/x.smbackup"), password: "p")
-        #expect(summary == ExportSummary(licenseCount: SampleData.entries.count, missingSerialCount: 1))
+        // Same reason as BackupModelTests: the count is derived from the fixtures (SPEC 0018, R26).
+        #expect(summary == ExportSummary(
+            licenseCount: SampleData.entries.count, missingSerialCount: 1,
+            attachmentCount: SampleData.licenses.reduce(0) { $0 + $1.attachments.count }))
     }
 
     // MARK: cancelImport (R17, A15 on the fake)

@@ -77,6 +77,7 @@ struct SwiftDataLicenseRepositoryTests {
         return SwiftDataLicenseRepository(
             modelContainer: container,
             serials: serials,
+            attachments: .unusedForTests(),
             makeID: { fixedID ?? UUID() },
             now: { fixedDate },
             beforeSave: { if failingSave { throw PersistFailure() } }
