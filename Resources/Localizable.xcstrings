@@ -371,6 +371,26 @@
         }
       }
     },
+    "Couldn't Remove the Attachment": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile rimuovere l'allegato"
+          }
+        }
+      }
+    },
+    "Couldn't Save a Copy of the Attachment": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile salvare una copia dell'allegato"
+          }
+        }
+      }
+    },
     "Couldn't Save the License": {
       "localizations": {
         "it": {
