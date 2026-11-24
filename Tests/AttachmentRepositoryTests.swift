@@ -396,6 +396,115 @@ struct AttachmentRepositoryTests {
         #expect(try await harness.repository.attachmentData(id: newID) == AttachmentFixtures.bytes())
     }
 
+    // MARK: SM-03, SM-04: the key is asked for only when there is something to read or write
+
+    /// The same library as `harness`, seen through a Keychain that refuses every call.
+    private func repositoryWithDeniedKey(
+        _ harness: AttachmentHarness
+    ) -> (repository: SwiftDataLicenseRepository, keys: InMemoryAttachmentKeyStore) {
+        let keys = InMemoryAttachmentKeyStore(key: nil, failure: .keyAccessDenied)
+        let repository = SwiftDataLicenseRepository(
+            modelContainer: harness.container,
+            serials: harness.serials,
+            attachments: AttachmentFileStore(directory: harness.directory.url, keys: keys),
+            now: { self.t })
+        return (repository, keys)
+    }
+
+    @Test("A missing file is reported as missing even when the key is gone or denied")
+    func missingFileIsReportedBeforeTheKey() async throws {
+        let harness = try AttachmentHarness()
+        defer { harness.remove() }
+        let owner = try await license(harness.repository)
+        let lost = try #require(try await harness.repository.addAttachment(
+            AttachmentFixtures.file(named: "Lost.lic"), to: owner.id).attachments.first)
+        try FileManager.default.removeItem(at: harness.files.url(for: lost.id))
+
+        let denied = repositoryWithDeniedKey(harness)
+        await #expect(throws: AttachmentError.fileMissing(lost.id)) {
+            try await denied.repository.attachmentData(id: lost.id)
+        }
+        #expect(await denied.keys.readCount == 0)
+
+        await harness.keys.forget()
+        await #expect(throws: AttachmentError.fileMissing(lost.id)) {
+            try await harness.repository.attachmentData(id: lost.id)
+        }
+    }
+
+    @Test("A present file still needs the key: denied or missing throws, nothing is skipped")
+    func presentFileStillNeedsTheKey() async throws {
+        let harness = try AttachmentHarness()
+        defer { harness.remove() }
+        let owner = try await license(harness.repository)
+        let kept = try #require(try await harness.repository.addAttachment(
+            AttachmentFixtures.file(), to: owner.id).attachments.first)
+
+        let denied = repositoryWithDeniedKey(harness)
+        await #expect(throws: AttachmentError.keyAccessDenied) {
+            try await denied.repository.attachmentData(id: kept.id)
+        }
+        await harness.keys.forget()
+        await #expect(throws: AttachmentError.keyMissing) {
+            try await harness.repository.attachmentData(id: kept.id)
+        }
+    }
+
+    @Test("Replace with only attachment ids the library already holds needs no key")
+    func replaceWithKnownIDsNeedsNoKey() async throws {
+        let harness = try AttachmentHarness()
+        defer { harness.remove() }
+        let owner = try await license(harness.repository)
+        let local = try #require(try await harness.repository.addAttachment(
+            AttachmentFixtures.file(named: "Local.lic"), to: owner.id).attachments.first)
+        var incoming = try #require(try await harness.repository.fetchAll().first)
+        incoming.productName = "Renamed In Backup"
+        incoming.updatedAt = Date(timeIntervalSinceReferenceDate: 700_000_000)
+
+        let denied = repositoryWithDeniedKey(harness)
+        let outcome = try await denied.repository.importLicense(
+            incoming, serial: "FAKE-SM04-0001",
+            attachments: [AttachmentFixtures.imported(id: local.id, named: "Other-Name.lic")],
+            policy: .replace)
+
+        #expect(outcome == .replaced)
+        #expect(await denied.keys.readCount == 0)
+        #expect(await denied.keys.addCount == 0)
+        let after = try #require(try await harness.repository.fetchAll().first)
+        #expect(after.productName == "Renamed In Backup")
+        #expect(after.attachments.map(\.id) == [local.id])
+        #expect(after.attachments.first?.fileName == "Local.lic")
+        #expect(try await harness.repository.serial(for: owner.id) == "FAKE-SM04-0001")
+        #expect(try await harness.repository.attachmentData(id: local.id) == AttachmentFixtures.bytes())
+    }
+
+    @Test("Replace with a new attachment id still needs the key and fails cleanly without it")
+    func replaceWithNewIDStillNeedsTheKey() async throws {
+        let harness = try AttachmentHarness()
+        defer { harness.remove() }
+        let owner = try await license(harness.repository)
+        let local = try #require(try await harness.repository.addAttachment(
+            AttachmentFixtures.file(named: "Local.lic"), to: owner.id).attachments.first)
+        let before = try #require(try await harness.repository.fetchAll().first)
+        var incoming = before
+        incoming.productName = "Renamed In Backup"
+
+        let denied = repositoryWithDeniedKey(harness)
+        await #expect(throws: AttachmentError.keyAccessDenied) {
+            try await denied.repository.importLicense(
+                incoming, serial: nil,
+                attachments: [
+                    AttachmentFixtures.imported(id: local.id, named: "Other-Name.lic"),
+                    AttachmentFixtures.imported(id: UUID(), named: "New.lic"),
+                ],
+                policy: .replace)
+        }
+
+        #expect(try await harness.repository.fetchAll().first == before)
+        #expect(harness.fileExists(local.id))
+        #expect(harness.storedFileCount == 1)
+    }
+
     @Test("An import that fails part way deletes only the files it wrote")
     func importCompensatesOnlyItsOwnFiles() async throws {
         let harness = try AttachmentHarness()

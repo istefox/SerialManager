@@ -58,10 +58,14 @@ struct AttachmentFileStore: Sendable {
     ///   `.decryptionFailed` when the bytes do not authenticate, or a key error.
     func read(id: UUID, key: SymmetricKey) throws -> Data {
         let fileURL = url(for: id)
-        guard FileManager.default.fileExists(atPath: fileURL.path(percentEncoded: false)) else {
+        // Only a file that is really absent is "missing"; a permission or I/O error is a symptom
+        // to stop on and keeps its own error (SM-03).
+        let sealed: Data
+        do {
+            sealed = try Data(contentsOf: fileURL)
+        } catch let error as CocoaError where error.code == .fileReadNoSuchFile {
             throw AttachmentError.fileMissing(id)
         }
-        let sealed = try Data(contentsOf: fileURL)
         do {
             return try AES.GCM.open(AES.GCM.SealedBox(combined: sealed), using: key)
         } catch {
@@ -80,6 +84,20 @@ struct AttachmentFileStore: Sendable {
     /// unreadable without decrypting anything (R13).
     func fileExists(id: UUID) -> Bool {
         FileManager.default.fileExists(atPath: url(for: id).path(percentEncoded: false))
+    }
+
+    /// Whether a file exists for `id`, telling absence apart from an error.
+    ///
+    /// `fileExists(id:)` answers false for a file behind a directory the process cannot search as
+    /// well as for a file that is gone. This one returns false only when the system says the path
+    /// does not exist (`ENOENT`, or `ENOTDIR` for a parent that is not a directory) and throws for
+    /// every other failure, so an export can skip a lost file without hiding an unreadable one.
+    func presence(id: UUID) throws -> Bool {
+        var info = stat()
+        if lstat(url(for: id).path(percentEncoded: false), &info) == 0 { return true }
+        let code = errno
+        if code == ENOENT || code == ENOTDIR { return false }
+        throw POSIXError(POSIXErrorCode(rawValue: code) ?? .EIO)
     }
 
     func url(for id: UUID) -> URL {

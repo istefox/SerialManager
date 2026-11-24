@@ -126,6 +126,67 @@ struct AttachmentBackupTests {
         #expect(kept.fileName == "Kept.lic")
     }
 
+    /// SM-03: the missing file is classified before the key is asked for, so a library whose key
+    /// is gone or denied can still export the rows that have nothing to read.
+    @Test("A missing file is skipped even when the attachment key is missing or denied")
+    func missingFileIsSkippedWithoutAKey() async throws {
+        let harness = try AttachmentHarness()
+        defer { harness.remove() }
+        let directory = try TemporaryDirectory()
+        defer { directory.remove() }
+        let url = directory.file()
+
+        let owner = try await harness.repository.create(
+            LicenseDraft(productName: "Sample Pro", serial: "FAKE-0000-0001"))
+        let lost = try #require(try await harness.repository.addAttachment(
+            AttachmentFixtures.file(named: "Lost.lic"), to: owner.id).attachments.first)
+        try FileManager.default.removeItem(at: harness.files.url(for: lost.id))
+
+        for failure in [AttachmentError?.none, .keyAccessDenied] {
+            let keys = InMemoryAttachmentKeyStore(key: nil, failure: failure)
+            let repository = SwiftDataLicenseRepository(
+                modelContainer: harness.container, serials: harness.serials,
+                attachments: AttachmentFileStore(directory: harness.directory.url, keys: keys))
+            let summary = try await F.service(repository: repository)
+                .export(to: url, password: password)
+            #expect(summary.licenseCount == 1)
+            #expect(summary.attachmentCount == 0)
+            #expect(summary.missingAttachmentCount == 1)
+            #expect(await keys.readCount == 0)
+        }
+    }
+
+    /// SM-03: only a file the system reports as absent is skipped. A file behind a directory the
+    /// process cannot search exists but cannot be read, so the export stops and writes nothing.
+    @Test("An attachment file that cannot be reached aborts the export instead of being skipped")
+    func unreachableFileAborts() async throws {
+        let harness = try AttachmentHarness()
+        defer { harness.remove() }
+        let directory = try TemporaryDirectory()
+        defer { directory.remove() }
+        let url = directory.file()
+
+        let owner = try await harness.repository.create(LicenseDraft(productName: "Sample Pro"))
+        let attachment = try #require(try await harness.repository.addAttachment(
+            AttachmentFixtures.file(), to: owner.id).attachments.first)
+        let folder = harness.directory.url.path(percentEncoded: false)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: folder)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: folder) }
+        try #require(!harness.files.fileExists(id: attachment.id), "fixture must hide the file")
+
+        for failure in [AttachmentError?.none, .keyAccessDenied] {
+            let keys = InMemoryAttachmentKeyStore(key: failure == nil ? AttachmentFixtures.key() : nil, failure: failure)
+            let repository = SwiftDataLicenseRepository(
+                modelContainer: harness.container, serials: harness.serials,
+                attachments: AttachmentFileStore(directory: harness.directory.url, keys: keys))
+            await #expect(throws: (any Error).self) {
+                _ = try await F.service(repository: repository).export(to: url, password: password)
+            }
+            #expect(!FileManager.default.fileExists(atPath: url.path(percentEncoded: false)))
+        }
+        #expect(throws: (any Error).self) { try harness.files.presence(id: attachment.id) }
+    }
+
     /// SM-02: files written by an earlier build carry `\/` for every slash. Both format versions
     /// still restore, and all six attachments come back byte for byte.
     @Test("Encrypted v1 and v2 backups with escaped slashes still import, attachments included")
@@ -193,6 +254,33 @@ struct AttachmentBackupTests {
         for attachment in restored {
             let expected = try #require(blobs[attachment.id.uuidString])
             #expect(try await target.repository.attachmentData(id: attachment.id) == expected)
+        }
+    }
+
+    @Test("A present file with a missing or denied key still aborts the export")
+    func presentFileWithoutAKeyAborts() async throws {
+        let harness = try AttachmentHarness()
+        defer { harness.remove() }
+        let directory = try TemporaryDirectory()
+        defer { directory.remove() }
+        let url = directory.file()
+
+        let owner = try await harness.repository.create(LicenseDraft(productName: "Sample Pro"))
+        _ = try await harness.repository.addAttachment(AttachmentFixtures.file(), to: owner.id)
+
+        for (failure, expected) in [
+            (AttachmentError?.none, AttachmentError.keyMissing),
+            (.keyAccessDenied, AttachmentError.keyAccessDenied),
+        ] {
+            let repository = SwiftDataLicenseRepository(
+                modelContainer: harness.container, serials: harness.serials,
+                attachments: AttachmentFileStore(
+                    directory: harness.directory.url,
+                    keys: InMemoryAttachmentKeyStore(key: nil, failure: failure)))
+            await #expect(throws: expected) {
+                try await F.service(repository: repository).export(to: url, password: password)
+            }
+            #expect(!FileManager.default.fileExists(atPath: url.path(percentEncoded: false)))
         }
     }
 

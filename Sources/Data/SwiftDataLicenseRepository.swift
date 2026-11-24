@@ -97,6 +97,11 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
 
     func attachmentData(id: UUID) async throws -> Data {
         guard let record = try fetchAttachment(id) else { throw AttachmentError.notFound(id) }
+        // A file that is already gone has no bytes to decrypt, so it is reported as missing before
+        // the key is asked for: an export must be able to count and skip it even when the key is
+        // missing or denied (R13). A file that is there still needs the key (R10).
+        // `presence` throws for an unreadable path instead of calling it missing (SM-03).
+        guard try attachments.presence(id: record.id) else { throw AttachmentError.fileMissing(record.id) }
         // Never generates a key: a library with attachments whose key is gone must say so (R10).
         let key = try await attachments.key(generateIfMissing: false)
         return try attachments.read(id: record.id, key: key)
@@ -449,7 +454,9 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
 
         // Key before any context change and before the serial step, so no unsaved change is held
         // across an `await` (I1). Generated only when the library holds no attachment at all (R10).
-        let key = try await importKey(for: pending)
+        // The set is taken before the key and is not recomputed: I3 keeps every other mutation out.
+        let toWrite = try newImportedAttachments(pending)
+        let key = try await importKey(for: toWrite)
 
         let written = try await writeImportedSerial(wanted, for: id)
 
@@ -469,8 +476,7 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
         var files: [UUID] = []
         do {
             modelContext.insert(license)
-            try insertImportedAttachments(
-                try newImportedAttachments(pending), licenseID: id, key: key, written: &files)
+            try insertImportedAttachments(toWrite, licenseID: id, key: key, written: &files)
             try persist()
         } catch {
             modelContext.rollback()
@@ -485,6 +491,10 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
     ///
     /// A backup carrying attachments into a library that holds none creates the first key; with
     /// attachments already stored, a missing key throws instead of being replaced (R10).
+    ///
+    /// `pending` is the set that will actually be written (`newImportedAttachments`), not the raw
+    /// list of the backup: a Replace whose attachments all exist locally writes no file and must
+    /// not fail for a key it never uses (R25).
     private func importKey(for pending: [AttachmentImport]) async throws -> SymmetricKey? {
         guard !pending.isEmpty else { return nil }
         let isLibraryEmpty = try modelContext.fetch(FetchDescriptor<AttachmentRecord>()).isEmpty
@@ -497,7 +507,9 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
         _ record: LicenseSummary, serial wanted: String?, attachments pending: [AttachmentImport]
     ) async throws {
         let id = record.id
-        let key = try await importKey(for: pending)
+        // Only the attachments this library lacks need a key (R25); see `createImported`.
+        let toWrite = try newImportedAttachments(pending)
+        let key = try await importKey(for: toWrite)
         let written = try await writeImportedSerial(wanted, for: id)
 
         // I2: fetch again after the serial store step.
@@ -530,8 +542,7 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
                 updatedAt: record.updatedAt
             )
             // Merge, never delete: a local attachment absent from the backup is left alone (D12).
-            try insertImportedAttachments(
-                try newImportedAttachments(pending), licenseID: id, key: key, written: &files)
+            try insertImportedAttachments(toWrite, licenseID: id, key: key, written: &files)
             try persist()
         } catch {
             modelContext.rollback()
