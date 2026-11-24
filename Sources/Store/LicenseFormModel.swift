@@ -199,7 +199,10 @@ final class LicenseFormModel {
             showsNameError = true
             return false
         }
-        if serialUnreadable, draft.serial.isEmpty {
+        // Judged on the value the store will actually write: a spaces-only input trims to empty
+        // and would delete the serial this guard exists to protect.
+        let serialIsBlank = draft.serial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if serialUnreadable, serialIsBlank {
             failedAction = .save
             errorMessage = String(localized: "The current serial couldn't be read, so saving now would remove it. Enter the serial again, or close the form and try later.")
             return false
@@ -207,8 +210,10 @@ final class LicenseFormModel {
         isSaving = true
         defer { isSaving = false }
         let saved: LicenseSummary
+        let serialUnchanged = !serialUnreadable && draft.serial == original.serial
         do {
-            saved = try await store.save(draft, id: license?.id)
+            // An untouched, readable serial is saved as loaded, not re-trimmed (SM-01).
+            saved = try await store.save(draft, id: license?.id, serialUnchanged: serialUnchanged)
         } catch {
             failedAction = .save
             errorMessage = error.localizedDescription
@@ -217,6 +222,13 @@ final class LicenseFormModel {
         // The fields are written: from here a retry must never create the license again, and
         // `original` must match the draft so Cancel does not warn about changes already saved.
         adopt(saved)
+        // The fields are stored, so the serial the form holds is now the stored one: a retry after
+        // an attachment failure must treat it as untouched instead of sending it again over a
+        // serial another editor saved in between (SM-01).
+        serialUnreadable = false
+        // The draft now shows the serial the store holds, so a retry after a partial Save compares
+        // like with like and never rewrites the trimmed value with the typed one.
+        if !serialUnchanged { draft.serial = draft.serial.trimmingCharacters(in: .whitespacesAndNewlines) }
         original = draft
         // Fields first, then removals, then adds (R16). The license's own fields are saved even
         // when an attachment fails, and the sheet stays open to say which one.

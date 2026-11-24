@@ -160,8 +160,17 @@ actor SwiftDataLicenseRepository: LicenseRepository, ModelActor {
         guard draft.hasValidProductName else { throw LicenseValidationError.emptyProductName }
         guard try fetchLicense(id) != nil else { throw LicenseRepositoryError.notFound(id) }
 
-        let old = try await readPreviousSerial(for: id)
-        let wroteSerial = try await applySerial(draft.serial, over: old, for: id)
+        // An untouched serial is not read, compared or written: whatever the store holds now
+        // stays, even when it changed after the form opened (SM-01).
+        let old: PreviousSerial
+        let wroteSerial: Bool
+        if draft.leavesSerialUntouched {
+            old = .absent
+            wroteSerial = false
+        } else {
+            old = try await readPreviousSerial(for: id)
+            wroteSerial = try await applySerial(draft.serial, over: old, for: id)
+        }
 
         // I2: fetch again after the serial store step.
         let found: License?

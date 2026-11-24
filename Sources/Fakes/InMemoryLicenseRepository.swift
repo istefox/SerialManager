@@ -70,7 +70,7 @@ actor InMemoryLicenseRepository: LicenseRepository {
         license.notes = draft.notes
         license.updatedAt = now()
         licenses[id] = license
-        store(serial: draft.serial, for: id)
+        if !draft.leavesSerialUntouched { store(serial: draft.serial, for: id) }
         return license
     }
 
