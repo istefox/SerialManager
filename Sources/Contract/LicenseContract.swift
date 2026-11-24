@@ -71,6 +71,11 @@ struct LicenseDraft: Equatable, Sendable {
     var version = ""
     var notes = ""
     var serial = ""
+    /// True when the user left the serial exactly as the form loaded it. An update then leaves the
+    /// stored serial alone, whatever `serial` holds, so saving other fields can neither restore
+    /// nor delete a serial another editor or an import changed since the form opened (SM-01).
+    /// Ignored by `create`.
+    var leavesSerialUntouched = false
 
     /// True when the product name has visible characters.
     var hasValidProductName: Bool {

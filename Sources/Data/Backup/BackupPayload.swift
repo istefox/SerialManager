@@ -221,7 +221,10 @@ struct BackupPayload: Codable, Equatable, Sendable {
     /// Encoder of the export: sorted keys (stable bytes) and three-digit UTC dates.
     static func makeEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
+        // Slashes stay literal: Base64 carries up to one `/` per 6 bits, and the optional `\/`
+        // escape would double those bytes and push a library that is within every attachment
+        // limit over the file-size cap (SPEC 0018, R24). `\/` remains valid on import.
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         encoder.dateEncodingStrategy = .custom { date, encoder in
             var container = encoder.singleValueContainer()
             try container.encode(date.formatted(dateStyle))

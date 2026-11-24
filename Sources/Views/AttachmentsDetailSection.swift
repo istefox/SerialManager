@@ -18,6 +18,8 @@ struct AttachmentsDetailSection: View {
     @State private var readable: [UUID: Bool] = [:]
     @State private var busy: UUID?
     @State private var errorMessage: String?
+    /// Which action produced `errorMessage`, so the alert names it (SM-07).
+    @State private var failedAction: AttachmentAction = .open
     @State private var exporting: Export?
     @State private var confirmsRemoval: AttachmentSummary?
 
@@ -40,7 +42,7 @@ struct AttachmentsDetailSection: View {
             await refreshReadability()
         }
         .alert(
-            Text("Couldn't Open the Attachment"),
+            Text(failedAction.failureTitle),
             isPresented: Binding(
                 get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
         ) {
@@ -66,7 +68,7 @@ struct AttachmentsDetailSection: View {
             contentType: exporting?.document.contentType ?? .data,
             defaultFilename: exporting?.fileName
         ) { result in
-            if case .failure(let error) = result { errorMessage = error.localizedDescription }
+            if case .failure(let error) = result { fail(.saveCopy, error) }
             exporting = nil
         }
     }
@@ -122,7 +124,7 @@ struct AttachmentsDetailSection: View {
             let data = try await store.attachmentData(id: attachment.id)
             try opener.open(attachment, data: data)
         } catch {
-            errorMessage = error.localizedDescription
+            fail(.open, error)
             await refreshReadability()
         }
     }
@@ -137,7 +139,7 @@ struct AttachmentsDetailSection: View {
                 fileName: attachment.fileName,
                 document: AttachmentDocument(data: data, contentType: attachment.contentType))
         } catch {
-            errorMessage = error.localizedDescription
+            fail(.saveCopy, error)
             await refreshReadability()
         }
     }
@@ -149,9 +151,14 @@ struct AttachmentsDetailSection: View {
             do {
                 _ = try await store.removeAttachment(id: attachment.id)
             } catch {
-                errorMessage = error.localizedDescription
+                fail(.remove, error)
             }
         }
+    }
+
+    private func fail(_ action: AttachmentAction, _ error: any Error) {
+        failedAction = action
+        errorMessage = error.localizedDescription
     }
 
     private func refreshReadability() async {
@@ -173,6 +180,20 @@ struct AttachmentsDetailSection: View {
             id = license.id
             updatedAt = license.updatedAt
             attachmentIDs = license.attachments.map(\.id)
+        }
+    }
+}
+
+/// What the user was doing to an attachment when it failed, so the alert names that action and
+/// not always the first one (SM-07).
+enum AttachmentAction: Equatable, CaseIterable {
+    case open, saveCopy, remove
+
+    var failureTitle: String {
+        switch self {
+        case .open: String(localized: "Couldn't Open the Attachment")
+        case .saveCopy: String(localized: "Couldn't Save a Copy of the Attachment")
+        case .remove: String(localized: "Couldn't Remove the Attachment")
         }
     }
 }

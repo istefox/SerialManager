@@ -97,9 +97,20 @@ final class LicenseStore {
     }
 
     /// Creates a license, or updates it when `id` is given, and selects it.
+    ///
+    /// `serialUnchanged` is true when the user left the serial exactly as the form loaded it: the
+    /// update then leaves the stored serial alone, so saving only other fields never rewrites a
+    /// serial imported with outer whitespace and never overwrites or deletes one that changed
+    /// since the form opened (SM-01). A serial the user changed or cleared is always trimmed, and
+    /// an empty one removes the item.
     @discardableResult
-    func save(_ draft: LicenseDraft, id: LicenseSummary.ID? = nil) async throws -> LicenseSummary {
-        let clean = draft.normalized
+    func save(
+        _ draft: LicenseDraft,
+        id: LicenseSummary.ID? = nil,
+        serialUnchanged: Bool = false
+    ) async throws -> LicenseSummary {
+        var clean = draft.normalized
+        if serialUnchanged { clean.leavesSerialUntouched = true }
         let saved: LicenseSummary
         if let id {
             saved = try await repository.update(id: id, with: clean)

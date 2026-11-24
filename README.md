@@ -86,8 +86,12 @@ Copy… (Salva una copia…).
 
 If an attachment reads "File missing" (File mancante), its file is no longer on this Mac (deleted
 from `~/Library/Application Support/<bundle id>/Attachments/`, or restored from a backup of the
-database alone). There is nothing left to recover: click Remove (Rimuovi) and attach the file
-again, or import a `.smbackup` that contains it.
+database alone). The app cannot recover it by itself: click Remove (Rimuovi) and attach the file
+again. To bring it back from a `.smbackup` that contains it, click Remove (Rimuovi) on the missing
+row first, then import the backup with Replace (Sostituisci). An import keeps every attachment the
+library already lists, even one whose file is missing, so without the Remove step the row stays
+"File missing". Skip (Salta) does not add the file either, because it leaves the whole license
+as it is.
 
 Attachments are encrypted with a key kept in this Mac's Keychain, like the serials. Copying the
 app's folder to another Mac therefore yields files that cannot be read; the encrypted export is

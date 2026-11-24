@@ -227,6 +227,135 @@ struct LicenseFormIntegrationTests {
         #expect(state.serials[license.id] == .some(serial))
     }
 
+    /// SM-01: a spaces-only input trims to empty in the store, so it must be refused while the
+    /// stored serial is unreadable, exactly like an empty one.
+    @Test func unreadableSerialIsNotErasedBySpacesOnlyInput() async throws {
+        let container = try makeContainer()
+        let serials = InMemorySerialStore()
+        let store = await makeStore(container: container, serials: serials, clock: TestClock(start))
+        let license = try await seed(store)
+
+        await serials.setFailure(InjectedFailure())
+        let model = LicenseFormModel(license: license)
+        await model.loadSerial(from: store)
+        await serials.setFailure(nil)
+
+        #expect(model.serialUnreadable)
+        model.draft.serial = "   \n "
+        #expect(await model.save(to: store) == false)
+        #expect(model.errorMessage != nil)
+        let state = try await storedState(container: container, serials: serials)
+        #expect(state.serials[license.id] == .some(serial))
+        #expect(await serials.itemCount == 1)
+    }
+
+    /// SM-01: a serial imported with outer whitespace is kept byte for byte when only other
+    /// fields are edited.
+    @Test func importedPaddedSerialSurvivesMetadataOnlyEdit() async throws {
+        let container = try makeContainer()
+        let serials = InMemorySerialStore()
+        let clock = TestClock(start)
+        let repository = SwiftDataLicenseRepository(
+            modelContainer: container, serials: serials, attachments: .unusedForTests(),
+            now: { clock.date })
+        let padded = "  \(serial)\t\n"
+        let id = UUID()
+        let imported = LicenseSummary(
+            id: id, productName: "Acme Editor", vendor: "Acme", registeredName: "",
+            registeredEmail: "", purchaseDate: nil, version: "1.0", notes: "",
+            createdAt: start, updatedAt: start)
+        _ = try await repository.importLicense(imported, serial: padded, attachments: [], policy: .skip)
+        let store = LicenseStore(repository: repository)
+        await store.load()
+        let license = try #require(store.licenses.first { $0.id == id })
+
+        clock.advance(by: 60)
+        let model = LicenseFormModel(license: license)
+        await model.loadSerial(from: store)
+        #expect(model.draft.serial == padded)
+        model.draft.notes = "Only the notes changed"
+        #expect(await model.save(to: store))
+
+        let state = try await storedState(container: container, serials: serials)
+        #expect(state.licenses.first?.notes == "Only the notes changed")
+        #expect(state.serials[id] == .some(padded))
+        #expect(Array((state.serials[id] ?? nil)?.utf8 ?? "".utf8) == Array(padded.utf8))
+
+        // Deliberately clearing it still removes the item.
+        let clearing = LicenseFormModel(license: state.licenses[0])
+        await clearing.loadSerial(from: store)
+        clearing.draft.serial = "  "
+        #expect(await clearing.save(to: store))
+        #expect(try await serials.serial(for: id) == nil)
+    }
+
+    /// SM-01: a serial the user typed or changed keeps the defined trim behaviour, and a retry
+    /// after a partial Save does not rewrite it with the untrimmed text.
+    @Test func changedSerialIsTrimmedAndStaysTrimmedAfterSave() async throws {
+        let container = try makeContainer()
+        let serials = InMemorySerialStore()
+        let store = await makeStore(container: container, serials: serials, clock: TestClock(start))
+        let license = try await seed(store)
+
+        let model = LicenseFormModel(license: license)
+        await model.loadSerial(from: store)
+        model.draft.serial = "  \(newSerial) "
+        #expect(await model.save(to: store))
+
+        #expect(try await serials.serial(for: license.id) == newSerial)
+        #expect(model.draft.serial == newSerial)
+        #expect(model.original.serial == newSerial)
+        #expect(!model.hasChanges)
+    }
+
+    /// SM-01: a form that did not touch the serial must not put its stale copy back, nor delete a
+    /// serial that was saved by another editor after the form opened.
+    @Test func staleFormSavingOnlyNotesKeepsTheNewerSerial() async throws {
+        let container = try makeContainer()
+        let serials = InMemorySerialStore()
+        let store = await makeStore(container: container, serials: serials, clock: TestClock(start))
+        let license = try await seed(store)
+
+        let stale = LicenseFormModel(license: license)
+        await stale.loadSerial(from: store)
+        let other = LicenseFormModel(license: license)
+        await other.loadSerial(from: store)
+        other.draft.serial = newSerial
+        #expect(await other.save(to: store))
+
+        stale.draft.notes = "Notes from the older form"
+        #expect(await stale.save(to: store))
+
+        let state = try await storedState(container: container, serials: serials)
+        #expect(state.licenses.first?.notes == "Notes from the older form")
+        #expect(Array((state.serials[license.id] ?? nil)?.utf8 ?? "".utf8) == Array(newSerial.utf8))
+    }
+
+    /// SM-01: the same race when the older form saw no serial at all.
+    @Test func staleFormWithoutSerialDoesNotDeleteTheNewerOne() async throws {
+        let container = try makeContainer()
+        let serials = InMemorySerialStore()
+        let store = await makeStore(container: container, serials: serials, clock: TestClock(start))
+        let creator = LicenseFormModel()
+        creator.draft = LicenseDraft(productName: "Acme Editor", vendor: "Acme")
+        #expect(await creator.save(to: store))
+        let license = try #require(store.licenses.first)
+
+        let stale = LicenseFormModel(license: license)
+        await stale.loadSerial(from: store)
+        let other = LicenseFormModel(license: license)
+        await other.loadSerial(from: store)
+        other.draft.serial = newSerial
+        #expect(await other.save(to: store))
+
+        stale.draft.notes = "Notes from the older form"
+        #expect(await stale.save(to: store))
+
+        let state = try await storedState(container: container, serials: serials)
+        #expect(state.licenses.first?.notes == "Notes from the older form")
+        #expect(state.serials[license.id] == .some(newSerial))
+    }
+
     // MARK: R5
 
     @Test func deleteRemovesRecordAndSerial() async throws {

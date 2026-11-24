@@ -126,6 +126,164 @@ struct AttachmentBackupTests {
         #expect(kept.fileName == "Kept.lic")
     }
 
+    /// SM-03: the missing file is classified before the key is asked for, so a library whose key
+    /// is gone or denied can still export the rows that have nothing to read.
+    @Test("A missing file is skipped even when the attachment key is missing or denied")
+    func missingFileIsSkippedWithoutAKey() async throws {
+        let harness = try AttachmentHarness()
+        defer { harness.remove() }
+        let directory = try TemporaryDirectory()
+        defer { directory.remove() }
+        let url = directory.file()
+
+        let owner = try await harness.repository.create(
+            LicenseDraft(productName: "Sample Pro", serial: "FAKE-0000-0001"))
+        let lost = try #require(try await harness.repository.addAttachment(
+            AttachmentFixtures.file(named: "Lost.lic"), to: owner.id).attachments.first)
+        try FileManager.default.removeItem(at: harness.files.url(for: lost.id))
+
+        for failure in [AttachmentError?.none, .keyAccessDenied] {
+            let keys = InMemoryAttachmentKeyStore(key: nil, failure: failure)
+            let repository = SwiftDataLicenseRepository(
+                modelContainer: harness.container, serials: harness.serials,
+                attachments: AttachmentFileStore(directory: harness.directory.url, keys: keys))
+            let summary = try await F.service(repository: repository)
+                .export(to: url, password: password)
+            #expect(summary.licenseCount == 1)
+            #expect(summary.attachmentCount == 0)
+            #expect(summary.missingAttachmentCount == 1)
+            #expect(await keys.readCount == 0)
+        }
+    }
+
+    /// SM-03: only a file the system reports as absent is skipped. A file behind a directory the
+    /// process cannot search exists but cannot be read, so the export stops and writes nothing.
+    @Test("An attachment file that cannot be reached aborts the export instead of being skipped")
+    func unreachableFileAborts() async throws {
+        let harness = try AttachmentHarness()
+        defer { harness.remove() }
+        let directory = try TemporaryDirectory()
+        defer { directory.remove() }
+        let url = directory.file()
+
+        let owner = try await harness.repository.create(LicenseDraft(productName: "Sample Pro"))
+        let attachment = try #require(try await harness.repository.addAttachment(
+            AttachmentFixtures.file(), to: owner.id).attachments.first)
+        let folder = harness.directory.url.path(percentEncoded: false)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: folder)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: folder) }
+        try #require(!harness.files.fileExists(id: attachment.id), "fixture must hide the file")
+
+        for failure in [AttachmentError?.none, .keyAccessDenied] {
+            let keys = InMemoryAttachmentKeyStore(key: failure == nil ? AttachmentFixtures.key() : nil, failure: failure)
+            let repository = SwiftDataLicenseRepository(
+                modelContainer: harness.container, serials: harness.serials,
+                attachments: AttachmentFileStore(directory: harness.directory.url, keys: keys))
+            await #expect(throws: (any Error).self) {
+                _ = try await F.service(repository: repository).export(to: url, password: password)
+            }
+            #expect(!FileManager.default.fileExists(atPath: url.path(percentEncoded: false)))
+        }
+        #expect(throws: (any Error).self) { try harness.files.presence(id: attachment.id) }
+    }
+
+    /// SM-02: files written by an earlier build carry `\/` for every slash. Both format versions
+    /// still restore, and all six attachments come back byte for byte.
+    @Test("Encrypted v1 and v2 backups with escaped slashes still import, attachments included")
+    func escapedSlashBackupsImport() async throws {
+        typealias J = BackupPayloadJSON
+        let directory = try TemporaryDirectory()
+        defer { directory.remove() }
+
+        // Version 1: no attachments, slashes escaped in the metadata and the serial.
+        let v1ID = UUID(uuidString: "00000000-0000-4000-8000-0000000000A1")!
+        var v1Entry = J.entry(id: v1ID.uuidString, name: "Sample/Pro")
+        v1Entry["serial"] = "FAKE/0000/0001"
+        let v1Plain = try J.payload([v1Entry])
+        #expect(String(decoding: v1Plain, as: UTF8.self).contains("\\/"))
+        var v1File = BackupFileBuilder()
+        v1File.version = 1
+        let v1URL = directory.file("v1.smbackup")
+        try v1File.sealed(v1Plain, password: password).write(to: v1URL)
+
+        let oldTarget = try AttachmentHarness()
+        defer { oldTarget.remove() }
+        let v1Service = F.service(repository: oldTarget.repository)
+        let v1Preview = try await v1Service.prepareImport(from: v1URL, password: password)
+        _ = try await v1Service.applyImport(v1Preview, policy: .replace)
+        let v1License = try #require(try await oldTarget.repository.fetchAll().first)
+        #expect(v1License.productName == "Sample/Pro")
+        #expect(try await oldTarget.repository.serial(for: v1License.id) == "FAKE/0000/0001")
+
+        // Version 2: six high-slash attachments over two licenses.
+        var blobs: [String: Data] = [:]
+        var entries: [[String: Any]] = []
+        for owner in 0..<2 {
+            let ownerID = UUID(uuidString: "00000000-0000-4000-8000-0000000000B\(owner)")!
+            var attachments: [[String: Any]] = []
+            for number in 0..<3 {
+                let id = UUID(uuidString: String(format: "00000000-0000-4000-8000-%012d", 100 + owner * 10 + number))!
+                var bytes = Data(repeating: 0xFF, count: 1_000_000)
+                bytes[0] = UInt8(owner * 3 + number)
+                blobs[id.uuidString] = bytes
+                attachments.append([
+                    "id": id.uuidString, "fileName": "Fake-\(owner)-\(number).bin",
+                    "contentType": NSNull(), "byteCount": bytes.count,
+                    "addedAt": "2026-01-01T09:00:00.250Z", "data": bytes.base64EncodedString(),
+                ])
+            }
+            var entry = J.entry(id: ownerID.uuidString, name: "Sample \(owner)")
+            entry["attachments"] = attachments
+            entries.append(entry)
+        }
+        let v2Plain = try J.payload(entries)
+        #expect(String(decoding: v2Plain, as: UTF8.self).contains("\\/"))
+        var v2File = BackupFileBuilder()
+        v2File.version = 2
+        let v2URL = directory.file("v2.smbackup")
+        try v2File.sealed(v2Plain, password: password).write(to: v2URL)
+        #expect(try Data(contentsOf: v2URL).count <= BackupFormat.maxBackupFileSize)
+
+        let target = try AttachmentHarness()
+        defer { target.remove() }
+        let service = F.service(repository: target.repository)
+        let preview = try await service.prepareImport(from: v2URL, password: password)
+        _ = try await service.applyImport(preview, policy: .replace)
+        let restored = try await target.repository.fetchAll().flatMap(\.attachments)
+        #expect(restored.count == 6)
+        for attachment in restored {
+            let expected = try #require(blobs[attachment.id.uuidString])
+            #expect(try await target.repository.attachmentData(id: attachment.id) == expected)
+        }
+    }
+
+    @Test("A present file with a missing or denied key still aborts the export")
+    func presentFileWithoutAKeyAborts() async throws {
+        let harness = try AttachmentHarness()
+        defer { harness.remove() }
+        let directory = try TemporaryDirectory()
+        defer { directory.remove() }
+        let url = directory.file()
+
+        let owner = try await harness.repository.create(LicenseDraft(productName: "Sample Pro"))
+        _ = try await harness.repository.addAttachment(AttachmentFixtures.file(), to: owner.id)
+
+        for (failure, expected) in [
+            (AttachmentError?.none, AttachmentError.keyMissing),
+            (.keyAccessDenied, AttachmentError.keyAccessDenied),
+        ] {
+            let repository = SwiftDataLicenseRepository(
+                modelContainer: harness.container, serials: harness.serials,
+                attachments: AttachmentFileStore(
+                    directory: harness.directory.url,
+                    keys: InMemoryAttachmentKeyStore(key: nil, failure: failure)))
+            await #expect(throws: expected) {
+                try await F.service(repository: repository).export(to: url, password: password)
+            }
+            #expect(!FileManager.default.fileExists(atPath: url.path(percentEncoded: false)))
+        }
+    }
+
     @Test("A decryption failure aborts the export instead of skipping")
     func decryptionFailureAborts() async throws {
         let harness = try AttachmentHarness()
@@ -289,6 +447,74 @@ struct AttachmentBackupTests {
             try await service.export(to: url, password: password)
         }
         #expect(!FileManager.default.fileExists(atPath: url.path(percentEncoded: false)))
+    }
+
+    /// SM-02: Base64 of 0xFF bytes is all slashes. With the optional `\/` escape on, six files of
+    /// 4,500,000 bytes (27,000,000 plaintext, inside D3 and D4) encoded to about 72,000,000 bytes
+    /// and the export failed with `fileTooLarge`; literal slashes keep it near 36,000,000.
+    @Test("Six high-slash attachments within the limits export and restore under the 64 MiB cap")
+    func highSlashAttachmentsFitTheCap() async throws {
+        let source = try AttachmentHarness()
+        defer { source.remove() }
+        let target = try AttachmentHarness()
+        defer { target.remove() }
+        let directory = try TemporaryDirectory()
+        defer { directory.remove() }
+        let url = directory.file()
+
+        let owners = [
+            try await source.repository.create(LicenseDraft(productName: "Sample Pro")),
+            try await source.repository.create(LicenseDraft(productName: "Sample Lite")),
+        ]
+        let bytes = Data(repeating: 0xFF, count: 4_500_000)
+        for (index, owner) in owners.enumerated() {
+            for number in 1...3 {
+                _ = try await source.repository.addAttachment(
+                    AttachmentFile(
+                        fileName: "Fake-\(index)-\(number).bin", contentType: nil, data: bytes),
+                    to: owner.id)
+            }
+        }
+
+        let summary = try await F.service(repository: source.repository)
+            .export(to: url, password: password)
+        #expect(summary.attachmentCount == 6)
+        let fileSize = try #require(
+            try FileManager.default.attributesOfItem(atPath: url.path(percentEncoded: false))[.size] as? Int)
+        #expect(fileSize <= BackupFormat.maxBackupFileSize)
+        #expect(fileSize < 40_000_000)
+
+        let importer = F.service(repository: target.repository)
+        let preview = try await importer.prepareImport(from: url, password: password)
+        _ = try await importer.applyImport(preview, policy: .replace)
+        let restored = try await target.repository.fetchAll().flatMap(\.attachments)
+        #expect(restored.count == 6)
+        let sample = try #require(restored.first)
+        #expect(try await target.repository.attachmentData(id: sample.id) == bytes)
+    }
+
+    /// SM-02: the encoder writes literal slashes, and a backup that still carries `\/` (written
+    /// before this change) decodes to the same bytes.
+    @Test("Literal and escaped slashes in the Base64 decode to the same attachment")
+    func escapedSlashesStillDecode() throws {
+        let id = UUID()
+        let raw = Data([0xFF, 0xFE, 0xFD, 0xFF, 0xFF, 0xFF])
+        let literal = raw.base64EncodedString()
+        #expect(literal.contains("/"))
+        let attachment = BackupPayload.Attachment(
+            id: id, fileName: "Fake.bin", contentType: nil, byteCount: raw.count,
+            addedAt: Date(timeIntervalSinceReferenceDate: 800_000_000), data: raw)
+
+        let encoded = try BackupPayload.makeEncoder().encode(attachment)
+        let text = try #require(String(data: encoded, encoding: .utf8))
+        #expect(text.contains("\"data\":\"\(literal)\""))
+        #expect(!text.contains("\\/"))
+
+        let escaped = text.replacingOccurrences(of: "/", with: "\\/")
+        let decoded = try BackupPayload.makeDecoder()
+            .decode(BackupPayload.Attachment.self, from: Data(escaped.utf8))
+        #expect(decoded.data == raw)
+        #expect(decoded.id == id)
     }
 
     /// File names of every attachment inside the backup at `url`.
