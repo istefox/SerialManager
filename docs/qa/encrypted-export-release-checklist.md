@@ -1,5 +1,7 @@
 # Release checklist: encrypted export (#9)
 
+> **Status (2026-11-23): accepted without execution.** This checklist was not run on a Release build. QA checked the flows on fake data in the Debug build; the owner accepted the remaining gap on Release and macOS 14 (see PROJECT_BRIEF.md, Status). The boxes below stay unchecked on purpose.
+
 Optional manual check for SPEC `docs/specs/0009-encrypted-export.md` R13 (A9) and the user-visible part of R1, R4, R5, R6 and R10 on a signed Release build (D4). Only the owner runs it. No agent runs it. About 10 minutes. Labels are given in English, with the Italian UI text in brackets.
 
 ## Warning: real data, real backup

@@ -1,5 +1,7 @@
 # Release checklist: encrypted import (#10)
 
+> **Status (2026-11-23): accepted without execution.** This checklist was not run on a Release build. QA checked the flows on fake data in the Debug build; the owner accepted the remaining gap on Release and macOS 14 (see PROJECT_BRIEF.md, Status). The boxes below stay unchecked on purpose.
+
 Manual check for SPEC `docs/specs/0010-encrypted-import.md` R14 (A14) and the user-visible part of R1, R4, R7, R8, R9 and R17 on a signed Release build (D6). Only the owner runs it. No agent runs it. About 20 minutes. Labels in English, Italian UI text in brackets.
 
 ## Why a separate macOS user
