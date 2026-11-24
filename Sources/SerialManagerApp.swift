@@ -39,6 +39,8 @@ struct SerialManagerApp: App {
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
         ) { _ in
             AttachmentOpener.cleanUp()
+            // The notification is delivered on the main queue, so this is the main actor.
+            MainActor.assumeIsolated { _ = Clipboard.clearPendingOnTermination() }
         }
     }
 
