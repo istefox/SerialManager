@@ -1,5 +1,7 @@
 # Release checklist: license form on persistent data (#6)
 
+> **Status (2026-11-23): accepted without execution.** This checklist was not run on a Release build. QA checked the flows on fake data in the Debug build; the owner accepted the remaining gap on Release and macOS 14 (see PROJECT_BRIEF.md, Status). The boxes below stay unchecked on purpose.
+
 Optional manual check for SPEC `docs/specs/license-form.md` R10 (R1 to R5 and R8). Only the owner runs it. No agent runs it. About 10 minutes. Labels are given in English, with the Italian UI text in brackets.
 
 ## Warning: this uses your real data
