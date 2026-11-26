@@ -47,7 +47,9 @@ which matches HIG guidance for sheets on macOS.
   no line limit, so a long name is never truncated (SPEC 0005, D3). The icon is the favicon of
   the license's Web address once it has loaded, and the `key.horizontal` symbol while loading and
   on any failure or when no address is set. The row renders at once and swaps the icon in later.
-  The icon is decorative and hidden from accessibility (SPEC 0030). `.searchable` in the sidebar, in the scope the search picker
+  The icon is decorative and hidden from accessibility (SPEC 0030). The icon's vertical centre is
+  aligned to the cap-height centre of the first line of the name (a baseline guide derived from the
+  headline font's cap height), so it stays with the first line when the name wraps. `.searchable` in the sidebar, in the scope the search picker
   holds, case and diacritic insensitive.
 - **Detail**: the selected license, or a placeholder.
 
