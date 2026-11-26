@@ -27,6 +27,9 @@ final class License {
     private(set) var registeredName: String = ""
     /// `""` means not set.
     private(set) var registeredEmail: String
+    /// Homepage of the product, normalized by `WebsiteURL` (`https://...`). `""` means not set.
+    /// Declared with a default so an existing store opens by lightweight migration (SPEC 0030).
+    private(set) var website: String = ""
     private(set) var purchaseDate: Date?
     /// `""` means not set.
     private(set) var version: String
@@ -47,6 +50,7 @@ final class License {
         vendor: String = "",
         registeredName: String = "",
         registeredEmail: String = "",
+        website: String = "",
         purchaseDate: Date? = nil,
         version: String = "",
         notes: String = "",
@@ -59,6 +63,7 @@ final class License {
         self.vendor = vendor
         self.registeredName = registeredName
         self.registeredEmail = registeredEmail
+        self.website = website
         self.purchaseDate = purchaseDate
         self.version = version
         self.notes = notes
@@ -76,6 +81,7 @@ final class License {
         vendor: String,
         registeredName: String,
         registeredEmail: String,
+        website: String,
         purchaseDate: Date?,
         version: String,
         notes: String,
@@ -86,6 +92,7 @@ final class License {
         self.vendor = vendor
         self.registeredName = registeredName
         self.registeredEmail = registeredEmail
+        self.website = website
         self.purchaseDate = purchaseDate
         self.version = version
         self.notes = notes
@@ -103,6 +110,7 @@ final class License {
         vendor: String,
         registeredName: String,
         registeredEmail: String,
+        website: String,
         purchaseDate: Date?,
         version: String,
         notes: String,
@@ -114,6 +122,7 @@ final class License {
         self.vendor = vendor
         self.registeredName = registeredName
         self.registeredEmail = registeredEmail
+        self.website = website
         self.purchaseDate = purchaseDate
         self.version = version
         self.notes = notes

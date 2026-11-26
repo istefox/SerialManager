@@ -1541,6 +1541,26 @@
         }
       }
     },
+    "Web": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Web"
+          }
+        }
+      }
+    },
+    "Enter a web address starting with http:// or https://, or leave it empty.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci un indirizzo web che inizi con http:// o https://, oppure lascia il campo vuoto."
+          }
+        }
+      }
+    },
     "Will be added when you save": {
       "localizations": {
         "it": {

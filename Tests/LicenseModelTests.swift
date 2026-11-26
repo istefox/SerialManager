@@ -18,6 +18,7 @@ struct LicenseModelTests {
         let vendor: String
         let registeredName: String
         let registeredEmail: String
+        let website: String
         let purchaseDate: Date?
         let version: String
         let notes: String
@@ -30,6 +31,7 @@ struct LicenseModelTests {
             vendor = license.vendor
             registeredName = license.registeredName
             registeredEmail = license.registeredEmail
+            website = license.website
             purchaseDate = license.purchaseDate
             version = license.version
             notes = license.notes
@@ -136,6 +138,7 @@ struct LicenseModelTests {
             vendor: license.vendor,
             registeredName: license.registeredName,
             registeredEmail: license.registeredEmail,
+            website: license.website,
             purchaseDate: license.purchaseDate,
             version: "2.0",
             notes: license.notes,
@@ -162,6 +165,7 @@ struct LicenseModelTests {
                 vendor: "Other Vendor",
                 registeredName: "Changed Name",
                 registeredEmail: "user@example.com",
+                website: "https://changed.example.test",
                 purchaseDate: tPlus1,
                 version: "9.9",
                 notes: "Changed",
@@ -195,6 +199,7 @@ struct LicenseModelTests {
             vendor: "",
             registeredName: "",
             registeredEmail: "",
+            website: "",
             purchaseDate: nil,
             version: "",
             notes: "",
@@ -255,6 +260,7 @@ struct LicenseModelTests {
             vendor: "Example Vendor",
             registeredName: "Jane Appleseed",
             registeredEmail: "user@example.com",
+            website: "https://restored.example.test",
             purchaseDate: tPlus1,
             version: "3.1",
             notes: "Fake notes",
@@ -269,6 +275,7 @@ struct LicenseModelTests {
         #expect(fetched.vendor == "Example Vendor")
         #expect(fetched.registeredName == "Jane Appleseed")
         #expect(fetched.registeredEmail == "user@example.com")
+        #expect(fetched.website == "https://restored.example.test")
         #expect(fetched.purchaseDate == tPlus1)
         #expect(fetched.version == "3.1")
         #expect(fetched.notes == "Fake notes")
@@ -288,6 +295,7 @@ struct LicenseModelTests {
                 vendor: "Other Vendor",
                 registeredName: "Changed Name",
                 registeredEmail: "user@example.com",
+                website: "https://changed.example.test",
                 purchaseDate: tPlus1,
                 version: "9.9",
                 notes: "Changed",

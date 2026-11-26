@@ -94,6 +94,9 @@ struct BackupPayload: Codable, Equatable, Sendable {
         /// first written: a backup without it decodes as `""` (ADR 0002, sections 6 and 7).
         let registeredName: String
         let registeredEmail: String
+        /// Homepage of the product. Optional key, added after version 2 shipped: a backup without
+        /// it decodes as `""`; export always writes it (ADR 0002, sections 6 and 7; SPEC 0030).
+        let website: String
         let purchaseDate: Date?
         /// Product version string of the license, not the file format version.
         let version: String
@@ -107,7 +110,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
         let attachments: [Attachment]
 
         enum CodingKeys: String, CodingKey {
-            case id, productName, vendor, registeredName, registeredEmail, purchaseDate, version, notes
+            case id, productName, vendor, registeredName, registeredEmail, website, purchaseDate, version, notes
             case createdAt, updatedAt, serial, attachments
         }
 
@@ -117,6 +120,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
             vendor: String,
             registeredName: String,
             registeredEmail: String,
+            website: String = "",
             purchaseDate: Date?,
             version: String,
             notes: String,
@@ -130,6 +134,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
             self.vendor = vendor
             self.registeredName = registeredName
             self.registeredEmail = registeredEmail
+            self.website = website
             self.purchaseDate = purchaseDate
             self.version = version
             self.notes = notes
@@ -147,6 +152,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
                 vendor: license.vendor,
                 registeredName: license.registeredName,
                 registeredEmail: license.registeredEmail,
+                website: license.website,
                 purchaseDate: license.purchaseDate,
                 version: license.version,
                 notes: license.notes,
@@ -175,6 +181,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
                 vendor: try container.decode(String.self, forKey: .vendor),
                 registeredName: try container.decodeIfPresent(String.self, forKey: .registeredName) ?? "",
                 registeredEmail: try container.decode(String.self, forKey: .registeredEmail),
+                website: try container.decodeIfPresent(String.self, forKey: .website) ?? "",
                 purchaseDate: try container.decodeIfPresent(Date.self, forKey: .purchaseDate),
                 version: try container.decode(String.self, forKey: .version),
                 notes: try container.decode(String.self, forKey: .notes),
@@ -194,6 +201,7 @@ struct BackupPayload: Codable, Equatable, Sendable {
             try container.encode(vendor, forKey: .vendor)
             try container.encode(registeredName, forKey: .registeredName)
             try container.encode(registeredEmail, forKey: .registeredEmail)
+            try container.encode(website, forKey: .website)
             if let purchaseDate {
                 try container.encode(purchaseDate, forKey: .purchaseDate)
             } else {

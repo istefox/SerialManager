@@ -12,6 +12,7 @@ struct SerialManagerApp: App {
     @State private var store: LicenseStore
     @State private var router = AppRouter()
     private let backupService: any BackupService
+    private let faviconProvider: any FaviconProvider = WebFaviconProvider()
 
     init() {
         #if DEBUG
@@ -47,6 +48,7 @@ struct SerialManagerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(store: store, router: router, backupService: backupService)
+                .environment(\.faviconProvider, faviconProvider)
         }
         .commands {
             AppCommands(

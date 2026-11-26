@@ -47,6 +47,8 @@ struct LicenseSummary: Identifiable, Hashable, Sendable {
     /// Name of the person the license is registered to. `""` means not set.
     var registeredName: String
     var registeredEmail: String
+    /// Normalized homepage (`https://...`). `""` means not set.
+    var website: String = ""
     var purchaseDate: Date?
     var version: String
     var notes: String
@@ -67,6 +69,8 @@ struct LicenseDraft: Equatable, Sendable {
     /// Name of the person the license is registered to. `""` means not set.
     var registeredName = ""
     var registeredEmail = ""
+    /// What the user typed; `normalized` turns it into `https://...` or `""`. See `WebsiteURL`.
+    var website = ""
     var purchaseDate: Date?
     var version = ""
     var notes = ""
@@ -82,6 +86,9 @@ struct LicenseDraft: Equatable, Sendable {
         !productName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// True when the website is empty or a valid http(s) address.
+    var hasValidWebsite: Bool { WebsiteURL.normalize(website) != nil }
+
     /// Copy with surrounding whitespace removed from every single-line field.
     var normalized: LicenseDraft {
         var copy = self
@@ -89,6 +96,8 @@ struct LicenseDraft: Equatable, Sendable {
         copy.vendor = vendor.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.registeredName = registeredName.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.registeredEmail = registeredEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        // An invalid value stays trimmed; the form refuses to save it (`hasValidWebsite`).
+        copy.website = WebsiteURL.normalize(website) ?? website.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.version = version.trimmingCharacters(in: .whitespacesAndNewlines)
         copy.serial = serial.trimmingCharacters(in: .whitespacesAndNewlines)
         return copy
@@ -103,6 +112,7 @@ extension LicenseDraft {
             vendor: license.vendor,
             registeredName: license.registeredName,
             registeredEmail: license.registeredEmail,
+            website: license.website,
             purchaseDate: license.purchaseDate,
             version: license.version,
             notes: license.notes,
