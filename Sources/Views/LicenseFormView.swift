@@ -26,7 +26,7 @@ struct LicenseFormView: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") { Task { await save() } }
-                    .disabled(model.isSaving || model.isLoadingSerial)
+                    .disabled(model.isSaving || model.isLoadingSerial || !model.websiteIsValid)
             }
         }
         .disabled(model.isSaving)
@@ -80,6 +80,15 @@ struct LicenseFormView: View {
                 }
                 TextField("Vendor", text: $model.draft.vendor)
                 TextField("Version", text: $model.draft.version)
+                TextField("Web", text: $model.draft.website)
+                    .textContentType(.URL)
+                    .autocorrectionDisabled()
+                if !model.websiteIsValid {
+                    Label("Enter a web address starting with http:// or https://, or leave it empty.",
+                        systemImage: "exclamationmark.circle.fill")
+                        .foregroundStyle(.red)
+                        .font(.callout)
+                }
             }
             Section("License") {
                 ZStack(alignment: .trailing) {

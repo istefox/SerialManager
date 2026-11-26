@@ -33,7 +33,9 @@ struct BackupPayloadTests {
             + #""serial":null,"#
             + #""updatedAt":"2026-01-01T09:00:00.500Z","#
             + #""vendor":"Example Software","#
-            + #""version":"1.0"}]}"#
+            + #""version":"1.0","#
+            // Always written, `""` when unset (SPEC 0030, D3).
+            + #""website":""}]}"#
         #expect(try json(payload) == expected)
     }
 

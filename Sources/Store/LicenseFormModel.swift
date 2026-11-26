@@ -63,6 +63,10 @@ final class LicenseFormModel {
         self.isLoadingSerial = license != nil && draft == nil
     }
 
+    /// False while the Web field holds something that is not an http(s) address. The view shows a
+    /// message and keeps Save disabled; `save` refuses too (SPEC 0030, D2).
+    var websiteIsValid: Bool { draft.hasValidWebsite }
+
     /// Pending attachments count as changes, so Cancel raises the discard confirmation (R17).
     var hasChanges: Bool { draft != original || hasAttachmentChanges }
     var hasAttachmentChanges: Bool { !pendingAttachments.isEmpty || !removedAttachmentIDs.isEmpty }
@@ -199,6 +203,7 @@ final class LicenseFormModel {
             showsNameError = true
             return false
         }
+        guard websiteIsValid else { return false }
         // Judged on the value the store will actually write: a spaces-only input trims to empty
         // and would delete the serial this guard exists to protect.
         let serialIsBlank = draft.serial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -222,6 +227,8 @@ final class LicenseFormModel {
         // The fields are written: from here a retry must never create the license again, and
         // `original` must match the draft so Cancel does not warn about changes already saved.
         adopt(saved)
+        // Show the stored (normalized) address, so a retry or Cancel sees no phantom change.
+        draft.website = saved.website
         // The fields are stored, so the serial the form holds is now the stored one: a retry after
         // an attachment failure must treat it as untouched instead of sending it again over a
         // serial another editor saved in between (SM-01).

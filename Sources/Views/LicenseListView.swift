@@ -91,16 +91,19 @@ struct LicenseRow: View {
     let license: LicenseSummary
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            // A sidebar List limits row text to one line: lift it so long names wrap (SPEC 0005, D3).
-            Text(license.productName)
-                .font(.headline)
-                .lineLimit(nil)
-            if !license.vendor.isEmpty {
-                Text(license.vendor)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            FaviconIcon(website: license.website)
+            VStack(alignment: .leading, spacing: 2) {
+                // A sidebar List limits row text to one line: lift it so long names wrap (SPEC 0005, D3).
+                Text(license.productName)
+                    .font(.headline)
                     .lineLimit(nil)
+                if !license.vendor.isEmpty {
+                    Text(license.vendor)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(nil)
+                }
             }
         }
         .padding(.vertical, 2)

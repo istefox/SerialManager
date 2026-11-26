@@ -47,6 +47,7 @@ actor InMemoryLicenseRepository: LicenseRepository {
             vendor: draft.vendor,
             registeredName: draft.registeredName,
             registeredEmail: draft.registeredEmail,
+            website: draft.website,
             purchaseDate: draft.purchaseDate,
             version: draft.version,
             notes: draft.notes,
@@ -65,6 +66,7 @@ actor InMemoryLicenseRepository: LicenseRepository {
         license.vendor = draft.vendor
         license.registeredName = draft.registeredName
         license.registeredEmail = draft.registeredEmail
+        license.website = draft.website
         license.purchaseDate = draft.purchaseDate
         license.version = draft.version
         license.notes = draft.notes

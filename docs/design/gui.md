@@ -43,8 +43,11 @@ which matches HIG guidance for sheets on macOS.
 `NavigationSplitView` with two columns.
 
 - **Sidebar** (min 220 pt): `List` with selection, in the order the sort picker holds. Row:
-  product name (headline) and vendor (secondary); both wrap with no line limit, so a long name is
-  never truncated (SPEC 0005, D3). `.searchable` in the sidebar, in the scope the search picker
+  a fixed 18 pt leading icon, then product name (headline) and vendor (secondary); both wrap with
+  no line limit, so a long name is never truncated (SPEC 0005, D3). The icon is the favicon of
+  the license's Web address once it has loaded, and the `key.horizontal` symbol while loading and
+  on any failure or when no address is set. The row renders at once and swaps the icon in later.
+  The icon is decorative and hidden from accessibility (SPEC 0030). `.searchable` in the sidebar, in the scope the search picker
   holds, case and diacritic insensitive.
 - **Detail**: the selected license, or a placeholder.
 
@@ -123,7 +126,9 @@ Attachments (SPEC 0018):
 
 One view, two modes (New License, Edit License), presented as a sheet.
 
-Fields: Product name (required), Vendor, Version, Serial (multi-line, monospaced, for long
+Fields: Product name (required), Vendor, Version, Web (optional homepage: "example.com" is stored
+as "https://example.com"; anything that is not an http or https address shows an inline message
+and keeps Save disabled, SPEC 0030), Serial (multi-line, monospaced, for long
 keys), Registered name (the person the license is registered to, "nome e cognome"), Registered
 email, Purchase date (optional: a toggle "Purchase date" reveals a `DatePicker`), Notes
 (multi-line), and an **Attachments** section.

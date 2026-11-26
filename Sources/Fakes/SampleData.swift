@@ -8,9 +8,10 @@ enum SampleData {
 
     static let entries: [(LicenseSummary, String?)] = [
         entry("Acme Photo Studio", vendor: "Acme Software", version: "3.2",
-              serial: "ACME-0000-TEST-0000", notes: "Sample entry for previews."),
+              serial: "ACME-0000-TEST-0000", notes: "Sample entry for previews.",
+              website: "https://acme.example.test"),
         entry("Example Markdown Editor", vendor: "Example Corp", version: "1.0",
-              serial: "EXAMPLE-1111-2222-3333"),
+              serial: "EXAMPLE-1111-2222-3333", website: "https://editor.example.test"),
         entry("Fictional Backup Pro", vendor: "Nowhere Labs", version: "12",
               serial: nil),
         entry("Placeholder Video Converter", vendor: "Sample Inc.", version: "",
@@ -37,6 +38,7 @@ enum SampleData {
 
     private static func entry(
         _ name: String, vendor: String, version: String, serial: String?, notes: String = "",
+        website: String = "",
         attachments: [(String, String?, Int)] = []
     ) -> (LicenseSummary, String?) {
         let license = LicenseSummary(
@@ -45,6 +47,7 @@ enum SampleData {
             vendor: vendor,
             registeredName: "Jane Appleseed",
             registeredEmail: "user@example.com",
+            website: website,
             purchaseDate: reference,
             version: version,
             notes: notes,

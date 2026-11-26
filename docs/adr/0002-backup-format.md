@@ -147,6 +147,7 @@ The plaintext is a UTF-8 JSON object, with no compression:
       "vendor": "Example Software",
       "registeredName": "Jane Appleseed",
       "registeredEmail": "user@example.com",
+      "website": "https://example.test",
       "purchaseDate": null,
       "version": "1.0",
       "notes": "",
@@ -189,6 +190,11 @@ The plaintext is a UTF-8 JSON object, with no compression:
 - `attachments` is the one key version 2 adds (#18, ADR 0004). Export always writes it, `[]` when
   the license has none. A version 1 file has no `attachments` key and decodes with none; this is
   the second key import accepts as absent, for the same reason `registeredName` is.
+- `website` is the homepage of the product (SPEC 0030): `""` when unset, otherwise the normalized
+  `https://...` or `http://...` address the app stored. It is the third key import accepts as
+  absent: a file written before it decodes with `website == ""`, so every older file still imports.
+  Export always writes it. Import stores the value as read and does not re-validate it. Section 7
+  covers why this does not bump the format version.
   - `data` is the **plaintext** of the file, base64 encoded by `JSONEncoder`'s default `Data`
     strategy. The library's own AES key never leaves the Mac and is never in the backup: the
     backup's own password is what protects the bytes, and the importing Mac re-encrypts them under
@@ -250,6 +256,10 @@ Attachments follow the same shape as the serials, with one difference: an import
   drop every attached file. Version 2 makes that build answer `unsupportedVersion` ("This backup
   was made with a newer version of SerialManager.") instead of losing data without a word. The
   user-visible cost is that a backup made after #18 cannot be restored by an older build.
+- `website` (SPEC 0030) is an optional key added without a version bump, like `registeredName`
+  before it. Unlike `attachments`, losing it in an older build costs one optional field, not
+  stored files: an older build ignores the key on import and drops it on re-export, and the
+  backup stays readable. The format stays at version 2.
 - The app keeps reading every format version it has ever written. A new version adds a reader;
   it never removes an old one.
 - A file whose version is above the newest one the app supports fails with

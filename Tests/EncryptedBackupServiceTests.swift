@@ -70,6 +70,8 @@ struct EncryptedBackupServiceTests {
             "version", "notes", "createdAt", "updatedAt", "serial",
             // Version 2: always present, `[]` for a license with no attachment (SPEC 0018, R23).
             "attachments",
+            // Always present, `""` when unset (SPEC 0030, D3).
+            "website",
         ]
         let editor = licenses[0]
         #expect(Set(editor.keys) == keys)
