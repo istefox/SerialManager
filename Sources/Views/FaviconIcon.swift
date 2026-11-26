@@ -15,6 +15,21 @@ struct FaviconIcon: View {
 
     static let size: CGFloat = 18
 
+    /// Cap height of the row's headline font, which the icon is centred against.
+    static var headlineCapHeight: CGFloat {
+        NSFont.preferredFont(forTextStyle: .headline).capHeight
+    }
+
+    /// Distance from the icon's top edge to the line the row's first-text-baseline alignment uses.
+    ///
+    /// A baseline-aligned HStack sits the icon's bottom edge on the name's baseline, which leaves the
+    /// icon too high. Reporting `size / 2 + capHeight / 2` as the icon's baseline puts the icon's
+    /// vertical centre on the centre of the capital letters: the centre is `capHeight / 2` above the
+    /// text baseline, and the baseline sits that far below the centre.
+    static func baselineGuide(size: CGFloat, capHeight: CGFloat) -> CGFloat {
+        size / 2 + capHeight / 2
+    }
+
     var body: some View {
         Group {
             if let loaded, loaded.website == website {
@@ -28,6 +43,9 @@ struct FaviconIcon: View {
             }
         }
         .frame(width: Self.size, height: Self.size)
+        .alignmentGuide(.firstTextBaseline) { _ in
+            Self.baselineGuide(size: Self.size, capHeight: Self.headlineCapHeight)
+        }
         .accessibilityHidden(true)
         .task(id: website) {
             guard let url = WebsiteURL.url(for: website) else {
